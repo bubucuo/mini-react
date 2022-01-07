@@ -79,7 +79,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(jsx);
 
 
 
-#### index.csss
+#### index.css
 
 ```css
 body {
