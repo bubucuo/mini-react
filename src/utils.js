@@ -20,15 +20,3 @@ export function isFn(fn) {
 export function isArray(arr) {
   return Array.isArray(arr);
 }
-
-export function updateNode(node, nextVal) {
-  Object.keys(nextVal).forEach((k) => {
-    if (k === "children") {
-      if (isStringOrNumber(nextVal[k])) {
-        node.textContent = nextVal[k] + "";
-      }
-    } else {
-      node[k] = nextVal[k];
-    }
-  });
-}
