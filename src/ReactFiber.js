@@ -1,3 +1,5 @@
+import { Placement } from "./utils";
+
 export default function createFiber(vnode, returnFiber) {
   const fiber = {
     type: vnode.type,
@@ -13,7 +15,7 @@ export default function createFiber(vnode, returnFiber) {
     // 父fiber
     return: returnFiber,
     // 标记节点任务类型（插入、更新、删除）
-    flags: "Placement",
+    flags: Placement,
     index: null,
   };
 

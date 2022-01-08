@@ -3,6 +3,12 @@ import { isStr } from "./utils";
 
 // work in progresss 当前正在工作执行的
 let wip = null;
+let wipRoot = null;
+
+export function scheduleUpdateOnFiber(fiber) {
+  wip = fiber;
+  wipRoot = fiber;
+}
 
 // 1. 执行当前任务wip
 // 2. 更新wip
