@@ -12,6 +12,14 @@ export function updateHostComponent(wip) {
   reconcileChildren(wip, wip.props.children);
 }
 
+export function updateTextComponent(wip) {
+  wip.stateNode = document.createTextNode(wip.props.children);
+}
+
+export function updateFragmentComponent(wip) {
+  reconcileChildren(wip, wip.props.children);
+}
+
 //
 export function updateFunctionComponent(wip) {
   const { type, props } = wip;

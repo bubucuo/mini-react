@@ -1,8 +1,17 @@
 import {
   updateClassComponent,
+  updateFragmentComponent,
   updateFunctionComponent,
   updateHostComponent,
+  updateTextComponent,
 } from "./ReactFiberReconciler";
+import {
+  ClassComponent,
+  Fragment,
+  FunctionComponent,
+  HostComponent,
+  HostText,
+} from "./ReactWorkTags";
 import { isFn, isStr, Placement } from "./utils";
 
 // work in progress 当前正在工作中的 fiber
@@ -17,16 +26,27 @@ export function scheduleUpdateOnFiber(fiber) {
 // 1. 执行当前wip任务
 // 2. 更新wip
 function performUnitOfWork() {
-  const { type } = wip;
+  const { tag } = wip;
   console.log("wipwww", wip); //sy-log
-  if (isStr(type)) {
-    // 原生标签
-    updateHostComponent(wip);
-  } else if (isFn(type)) {
-    // 函数组件、类组件
-    type.prototype.isReactComponent
-      ? updateClassComponent(wip)
-      : updateFunctionComponent(wip);
+  switch (tag) {
+    case HostComponent:
+      updateHostComponent(wip);
+      break;
+    case HostText:
+      updateTextComponent(wip);
+      break;
+    case ClassComponent:
+      updateClassComponent(wip);
+      break;
+    case FunctionComponent:
+      updateFunctionComponent(wip);
+      break;
+    case Fragment:
+      updateFragmentComponent(wip);
+      break;
+
+    default:
+      break;
   }
 
   // 深度优先遍历(国王的故事)
