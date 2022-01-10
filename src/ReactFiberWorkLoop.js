@@ -62,8 +62,7 @@ function commitWorker(wip) {
   const { flags, stateNode } = wip;
 
   // 父dom节点
-  let parentNode = getParentNode(wip.return);
-
+  let parentNode = wip.return.stateNode;
   if (flags && Placement && stateNode) {
     parentNode.appendChild(stateNode);
   }
@@ -72,15 +71,4 @@ function commitWorker(wip) {
   commitWorker(wip.child);
   // 2. 更新兄弟节点
   commitWorker(wip.sibling);
-}
-
-function getParentNode(wip) {
-  let tem = wip;
-
-  while (tem) {
-    if (tem.stateNode) {
-      return tem.stateNode;
-    }
-    tem = tem.return;
-  }
 }
