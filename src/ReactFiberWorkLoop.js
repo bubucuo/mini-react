@@ -12,6 +12,7 @@ import {
   HostComponent,
   HostText,
 } from "./ReactWorkTags";
+import { scheduleCallback } from "./scheduler";
 import { isFn, isStr, Placement } from "./utils";
 
 // work in progress 当前正在工作中的 fiber
@@ -21,13 +22,14 @@ let wipRoot = null;
 export function scheduleUpdateOnFiber(fiber) {
   wip = fiber;
   wipRoot = fiber;
+
+  scheduleCallback(workLoop);
 }
 
 // 1. 执行当前wip任务
 // 2. 更新wip
 function performUnitOfWork() {
   const { tag } = wip;
-  console.log("wipwww", wip); //sy-log
   switch (tag) {
     case HostComponent:
       updateHostComponent(wip);
@@ -67,8 +69,8 @@ function performUnitOfWork() {
   wip = null;
 }
 
-function workLoop(IdleDeadline) {
-  while (wip && IdleDeadline.timeRemaining() > 0) {
+function workLoop() {
+  while (wip) {
     performUnitOfWork();
   }
 
@@ -76,8 +78,6 @@ function workLoop(IdleDeadline) {
     commitRoot();
   }
 }
-
-requestIdleCallback(workLoop);
 
 function commitRoot() {
   commitWorker(wipRoot);
