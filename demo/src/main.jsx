@@ -1,13 +1,15 @@
 // import React from "react";
 // import ReactDOM from "react-dom";
-import { ReactDOM, Component } from "../which-react";
+import { ReactDOM, Component, useReducer } from "../which-react";
 
 import "./index.css";
 
 function FunctionComponent(props) {
+  const [count, setCount] = useReducer((x) => x + 1, 0);
   return (
     <div className="border">
       <p>{props.name}</p>
+      <button onClick={() => setCount()}>{count}</button>
     </div>
   );
 }

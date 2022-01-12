@@ -13,7 +13,7 @@ import {
   HostText,
 } from "./ReactWorkTags";
 import { scheduleCallback } from "./scheduler";
-import { isFn, isStr, Placement } from "./utils";
+import { isFn, isStr, Placement, Update, updateNode } from "./utils";
 
 // work in progress 当前正在工作中的 fiber
 let wip = null;
@@ -95,8 +95,12 @@ function commitWorker(wip) {
   // 父dom节点
   let parentNode = getParentNode(wip.return); // wip.return.stateNode;
 
-  if (flags && Placement && stateNode) {
+  if (flags & Placement && stateNode) {
     parentNode.appendChild(stateNode);
+  }
+
+  if (flags & Update && stateNode) {
+    updateNode(stateNode, wip.alternate.props, wip.props);
   }
 
   // 2. 更新子节点
