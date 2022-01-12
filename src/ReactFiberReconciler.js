@@ -1,3 +1,4 @@
+import { renderWithHooks } from "./hooks";
 import { createFiber } from "./ReactFiber";
 import { isArray, isStringOrNumber, updateNode } from "./utils";
 
@@ -22,6 +23,7 @@ export function updateFragmentComponent(wip) {
 
 //
 export function updateFunctionComponent(wip) {
+  renderWithHooks(wip);
   const { type, props } = wip;
 
   const children = type(props);

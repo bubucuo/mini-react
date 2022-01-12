@@ -26,6 +26,9 @@ export function createFiber(vnode, returnFiber) {
     flags: Placement,
 
     index: null,
+
+    // old fiber
+    alternate: null,
   };
 
   // 判断tag，判断fiber任务节点类型
