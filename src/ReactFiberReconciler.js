@@ -40,6 +40,16 @@ export function updateClassComponent(wip) {
   reconcileChildren(wip, children);
 }
 
+function deleteChild(returnFiber, childToDelete) {
+  const deletions = returnFiber.deletions;
+
+  if (deletions) {
+    returnFiber.deletions.push(childToDelete);
+  } else {
+    returnFiber.deletions = [childToDelete];
+  }
+}
+
 // a b c
 // b c
 function reconcileChildren(wip, children) {
@@ -62,6 +72,10 @@ function reconcileChildren(wip, children) {
         alternate: oldFiber,
         flags: Update,
       });
+    }
+    if (!same && oldFiber) {
+      // 删除节点
+      deleteChild(wip, oldFiber);
     }
 
     if (oldFiber) {
