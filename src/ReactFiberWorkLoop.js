@@ -1,21 +1,10 @@
 import {
-  updateClassComponent,
-  updateFragmentComponent,
   updateFunctionComponent,
   updateHostComponent,
-  updateTextComponent,
 } from "./ReactFiberReconciler";
-import {
-  ClassComponent,
-  Fragment,
-  FunctionComponent,
-  HostComponent,
-  HostText,
-} from "./ReactWorkTags";
-import { isFn, isStr, Placement } from "./utils";
+import { FunctionComponent, HostComponent } from "./ReactWorkTags";
 
-// work in progress 当前正在工作中的 fiber
-let wip = null;
+let wip = null; // work in progress 当前正在工作中的
 let wipRoot = null;
 
 export function scheduleUpdateOnFiber(fiber) {
@@ -23,33 +12,27 @@ export function scheduleUpdateOnFiber(fiber) {
   wipRoot = fiber;
 }
 
-// 1. 执行当前wip任务
+// 1. 执行当前fiber任务（wip）
 // 2. 更新wip
+
 function performUnitOfWork() {
+  //  todo 执行当前fiber任务（wip）
   const { tag } = wip;
-  console.log("wipwww", wip); //sy-log
+
   switch (tag) {
     case HostComponent:
       updateHostComponent(wip);
       break;
-    case HostText:
-      updateTextComponent(wip);
-      break;
-    case ClassComponent:
-      updateClassComponent(wip);
-      break;
+
     case FunctionComponent:
       updateFunctionComponent(wip);
-      break;
-    case Fragment:
-      updateFragmentComponent(wip);
       break;
 
     default:
       break;
   }
 
-  // 深度优先遍历(国王的故事)
+  // 2. 更新wip 深度优先遍历 （王朝的故事）
   if (wip.child) {
     wip = wip.child;
     return;
@@ -67,18 +50,6 @@ function performUnitOfWork() {
   wip = null;
 }
 
-function workLoop(IdleDeadline) {
-  while (wip && IdleDeadline.timeRemaining() > 0) {
-    performUnitOfWork();
-  }
-
-  if (!wip && wipRoot) {
-    commitRoot();
-  }
-}
-
-requestIdleCallback(workLoop);
-
 function commitRoot() {
   commitWorker(wipRoot);
   wipRoot = null;
@@ -88,22 +59,30 @@ function commitWorker(wip) {
   if (!wip) {
     return;
   }
-  // 1. 更新自己
-
-  const { flags, stateNode } = wip;
-
+  // 1. 自己
+  const { stateNode } = wip;
   // 父dom节点
-  let parentNode = getParentNode(wip.return); // wip.return.stateNode;
-
-  if (flags && Placement && stateNode) {
+  const parentNode = getParentNode(wip.return); //wip.return.stateNode;
+  if (stateNode) {
     parentNode.appendChild(stateNode);
   }
-
-  // 2. 更新子节点
+  // 2.
   commitWorker(wip.child);
-  // 2. 更新兄弟节点
+  // 3.
   commitWorker(wip.sibling);
 }
+
+function workLoop(IdleDeadLine) {
+  while (wip && IdleDeadLine.timeRemaining() > 0) {
+    performUnitOfWork();
+  }
+
+  if (!wip && wipRoot) {
+    commitRoot();
+  }
+}
+
+requestIdleCallback(workLoop);
 
 function getParentNode(wip) {
   let tem = wip;

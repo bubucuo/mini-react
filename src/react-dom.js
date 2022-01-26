@@ -7,13 +7,15 @@ function ReactDOMRoot(internalRoot) {
 
 ReactDOMRoot.prototype.render = function (children) {
   const root = this._internalRoot;
+
   updateContainer(children, root);
 };
 
 function updateContainer(element, container) {
   const { containerInfo } = container;
+
   const rootFiber = createFiber(element, {
-    type: containerInfo,
+    type: containerInfo.nodeName.toLocaleLowerCase(),
     stateNode: containerInfo,
   });
 
@@ -21,6 +23,13 @@ function updateContainer(element, container) {
 }
 
 function createRoot(container) {
+  //   console.log("container", container); //sy-log
+  //   return {
+  //     render: (element) => {
+  //       console.log("element", element); //sy-log
+  //     },
+  //   };
+
   const root = {
     containerInfo: container,
   };

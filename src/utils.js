@@ -32,6 +32,7 @@ export function updateNode(node, nextVal) {
         node.textContent = nextVal[k] + "";
       }
     } else {
+      // href className
       node[k] = nextVal[k];
     }
   });
