@@ -1,8 +1,18 @@
 import {
   updateFunctionComponent,
   updateHostComponent,
+  updateClassComponent,
+  updateFragmentComponent,
+  updateTextComponent,
 } from "./ReactFiberReconciler";
-import { FunctionComponent, HostComponent } from "./ReactWorkTags";
+import {
+  ClassComponent,
+  Fragment,
+  FunctionComponent,
+  HostComponent,
+  HostText,
+} from "./ReactWorkTags";
+import { Placement, Update, updateNode } from "./utils";
 
 let wip = null; // work in progress 当前正在工作中的
 let wipRoot = null;
@@ -26,6 +36,18 @@ function performUnitOfWork() {
 
     case FunctionComponent:
       updateFunctionComponent(wip);
+      break;
+
+    case ClassComponent:
+      updateClassComponent(wip);
+      break;
+
+    case Fragment:
+      updateFragmentComponent(wip);
+      break;
+
+    case HostText:
+      updateTextComponent(wip);
       break;
 
     default:
@@ -60,22 +82,48 @@ function commitWorker(wip) {
     return;
   }
   // 1. 自己
-  const { stateNode } = wip;
+  const { stateNode, flags } = wip;
   // 父dom节点
   const parentNode = getParentNode(wip.return); //wip.return.stateNode;
-  if (stateNode) {
+
+  if (flags & Placement && stateNode) {
     parentNode.appendChild(stateNode);
   }
+
+  if (flags & Update && stateNode) {
+    updateNode(stateNode, wip.alternate.props, wip.props);
+  }
+  if (wip.deletions) {
+    commitDeletions(wip.deletions, stateNode || parentNode);
+  }
+
   // 2.
   commitWorker(wip.child);
   // 3.
   commitWorker(wip.sibling);
 }
 
+function commitDeletions(deletions, parentNode) {
+  for (let i = 0; i < deletions.length; i++) {
+    parentNode.removeChild(getStateNode(deletions[i]));
+  }
+}
+
+function getStateNode(fiber) {
+  let tem = fiber;
+  while (!tem.stateNode) {
+    tem = tem.child;
+  }
+
+  return tem.stateNode;
+}
+
 function workLoop(IdleDeadLine) {
   while (wip && IdleDeadLine.timeRemaining() > 0) {
     performUnitOfWork();
   }
+
+  requestIdleCallback(workLoop);
 
   if (!wip && wipRoot) {
     commitRoot();
