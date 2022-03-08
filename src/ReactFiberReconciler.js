@@ -9,15 +9,31 @@ export function updateHostComponent(wip) {
   }
 
   reconcileChildren(wip, wip.props.children);
+  // console.log("wip", wip); //sy-log
 }
 
-export function updateFunctionComponent() {}
+export function updateFunctionComponent(wip) {
+  const { type, props } = wip;
 
-export function updateClassComponent() {}
+  const children = type(props);
+  reconcileChildren(wip, children);
+}
 
-export function updateFragmentComponent() {}
+export function updateClassComponent(wip) {
+  const { type, props } = wip;
+  const instance = new type(props);
+  const children = instance.render();
 
-export function updateHostTextComponent() {}
+  reconcileChildren(wip, children);
+}
+
+export function updateFragmentComponent(wip) {
+  reconcileChildren(wip, wip.props.children);
+}
+
+export function updateHostTextComponent(wip) {
+  wip.stateNode = document.createTextNode(wip.props.children);
+}
 
 // 协调（diff）
 function reconcileChildren(wip, children) {
