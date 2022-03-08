@@ -4,7 +4,7 @@ import {
   updateFunctionComponent,
   updateHostComponent,
   updateHostTextComponent,
-} from "./ReactReconciler";
+} from "./ReactFiberReconciler";
 import {
   ClassComponent,
   Fragment,
@@ -12,8 +12,16 @@ import {
   HostComponent,
   HostText,
 } from "./ReactWorkTags";
+import { Placement } from "./utils";
 
 let wip = null; // work in progress 当前正在工作中的
+let wipRoot = null;
+
+// 初次渲染和更新
+export function scheduleUpdateOnFiber(fiber) {
+  wip = fiber;
+  wipRoot = fiber;
+}
 
 //
 function performUnitOfWork() {
@@ -59,4 +67,41 @@ function performUnitOfWork() {
   }
 
   wip = null;
+}
+
+function workLoop(IdleDeadline) {
+  while (wip && IdleDeadline.timeRemaining() > 0) {
+    performUnitOfWork();
+  }
+
+  if (!wip && wipRoot) {
+    commitRoot();
+  }
+}
+
+requestIdleCallback(workLoop);
+
+// 提交
+function commitRoot() {
+  commitWorker(wipRoot);
+  wipRoot = null;
+}
+
+function commitWorker(wip) {
+  if (!wip) {
+    return;
+  }
+
+  // 1. 提交自己
+  // parentNode是父DOM节点
+  // ?
+  const parentNode = wip.return.stateNode;
+  const { flags, stateNode } = wip;
+  if (flags & Placement && stateNode) {
+    parentNode.appendChild(stateNode);
+  }
+  // 2. 提交子节点
+  commitWorker(wip.child);
+  // 3. 提交兄弟
+  commitWorker(wip.sibling);
 }
