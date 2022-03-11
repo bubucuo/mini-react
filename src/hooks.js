@@ -47,11 +47,37 @@ export function useReducer(reducer, initalState) {
     hook.memorizedState = initalState;
   }
 
-  const dispatch = () => {
-    hook.memorizedState = reducer(hook.memorizedState);
-    currentlyRenderingFiber.alternate = { ...currentlyRenderingFiber };
-    scheduleUpdateOnFiber(currentlyRenderingFiber);
-    console.log("log"); //sy-log
-  };
+  //   let dispatch = store.dispatch;
+  //   const midApi = {
+  //     getState: store.getState(),
+  //     // dispatch,
+  //     dispatch: (action, ...args) => dispatch(action, ...args),
+  //   };
+  //   dispatch
+  //   const dispatch = () => {
+  //     hook.memorizedState = reducer(hook.memorizedState);
+  //     currentlyRenderingFiber.alternate = { ...currentlyRenderingFiber };
+  //     scheduleUpdateOnFiber(currentlyRenderingFiber);
+  //     console.log("log"); //sy-log
+  //   };
+
+  const dispatch = dispatchReducerAction.bind(
+    null,
+    currentlyRenderingFiber,
+    hook,
+    reducer
+  );
+
   return [hook.memorizedState, dispatch];
+}
+
+function dispatchReducerAction(fiber, hook, reducer, action) {
+  hook.memorizedState = reducer ? reducer(hook.memorizedState) : action;
+  fiber.alternate = { ...fiber };
+  fiber.sibling = null;
+  scheduleUpdateOnFiber(fiber);
+}
+
+export function useState(initalState) {
+  return useReducer(null, initalState);
 }
