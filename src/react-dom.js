@@ -6,24 +6,23 @@ function ReactDOMRoot(internalRoot) {
 }
 
 ReactDOMRoot.prototype.render = function (children) {
+  // console.log("children", children); //sy-log
   const root = this._internalRoot;
   updateContainer(children, root);
 };
 
 function updateContainer(element, container) {
   const { containerInfo } = container;
-  const rootFiber = createFiber(element, {
-    type: containerInfo,
+  const fiber = createFiber(element, {
+    type: containerInfo.nodeName.toLocaleLowerCase(),
     stateNode: containerInfo,
   });
-
-  scheduleUpdateOnFiber(rootFiber);
+  // 组件初次渲染
+  scheduleUpdateOnFiber(fiber);
 }
 
 function createRoot(container) {
-  const root = {
-    containerInfo: container,
-  };
+  const root = { containerInfo: container };
 
   return new ReactDOMRoot(root);
 }

@@ -3,7 +3,7 @@ import {
   updateFragmentComponent,
   updateFunctionComponent,
   updateHostComponent,
-  updateTextComponent,
+  updateHostTextComponent,
 } from "./ReactFiberReconciler";
 import {
   ClassComponent,
@@ -12,46 +12,45 @@ import {
   HostComponent,
   HostText,
 } from "./ReactWorkTags";
-import { scheduleCallback } from "./scheduler";
-import { isFn, isStr, Placement, Update, updateNode } from "./utils";
+import { Placement } from "./utils";
 
-// work in progress 当前正在工作中的 fiber
-let wip = null;
+let wip = null; // work in progress 当前正在工作中的
 let wipRoot = null;
 
+// 初次渲染和更新
 export function scheduleUpdateOnFiber(fiber) {
   wip = fiber;
   wipRoot = fiber;
-
-  scheduleCallback(workLoop);
 }
 
-// 1. 执行当前wip任务
-// 2. 更新wip
+//
 function performUnitOfWork() {
   const { tag } = wip;
+
+  // todo 1. 更新当前组件
   switch (tag) {
     case HostComponent:
       updateHostComponent(wip);
       break;
-    case HostText:
-      updateTextComponent(wip);
-      break;
-    case ClassComponent:
-      updateClassComponent(wip);
-      break;
+
     case FunctionComponent:
       updateFunctionComponent(wip);
+      break;
+
+    case ClassComponent:
+      updateClassComponent(wip);
       break;
     case Fragment:
       updateFragmentComponent(wip);
       break;
-
+    case HostText:
+      updateHostTextComponent(wip);
+      break;
     default:
       break;
   }
 
-  // 深度优先遍历(国王的故事)
+  // todo 2. 下一个更新谁 深度优先遍历 （国王的故事）
   if (wip.child) {
     wip = wip.child;
     return;
@@ -66,11 +65,12 @@ function performUnitOfWork() {
     }
     next = next.return;
   }
+
   wip = null;
 }
 
-function workLoop() {
-  while (wip) {
+function workLoop(IdleDeadline) {
+  while (wip && IdleDeadline.timeRemaining() > 0) {
     performUnitOfWork();
   }
 
@@ -79,6 +79,9 @@ function workLoop() {
   }
 }
 
+requestIdleCallback(workLoop);
+
+// 提交
 function commitRoot() {
   commitWorker(wipRoot);
   wipRoot = null;
@@ -88,28 +91,18 @@ function commitWorker(wip) {
   if (!wip) {
     return;
   }
-  // 1. 更新自己
 
+  // 1. 提交自己
+  // parentNode是父DOM节点
+  // ?
+  const parentNode = getParentNode(wip.return); /// wip.return.stateNode;
   const { flags, stateNode } = wip;
-
-  // 父dom节点
-  let parentNode = getParentNode(wip.return); // wip.return.stateNode;
-
   if (flags & Placement && stateNode) {
     parentNode.appendChild(stateNode);
   }
-
-  if (flags & Update && stateNode) {
-    updateNode(stateNode, wip.alternate.props, wip.props);
-  }
-
-  if (wip.deletions) {
-    commitDeletion(wip.deletions, stateNode || parentNode);
-  }
-
-  // 2. 更新子节点
+  // 2. 提交子节点
   commitWorker(wip.child);
-  // 2. 更新兄弟节点
+  // 3. 提交兄弟
   commitWorker(wip.sibling);
 }
 
@@ -121,20 +114,4 @@ function getParentNode(wip) {
     }
     tem = tem.return;
   }
-}
-
-// deletions: fiber
-function commitDeletion(deletions, parentNode) {
-  for (let i = 0; i < deletions.length; i++) {
-    const deletion = deletions[i];
-    parentNode.removeChild(getStateNode(deletion));
-  }
-}
-
-function getStateNode(fiber) {
-  let tem = fiber;
-  while (!tem.stateNode) {
-    tem = tem.child;
-  }
-  return tem.stateNode;
 }

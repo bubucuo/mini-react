@@ -9,35 +9,34 @@ import { isFn, isStr, isUndefined, Placement } from "./utils";
 
 export function createFiber(vnode, returnFiber) {
   const fiber = {
+    // 类型
     type: vnode.type,
     key: vnode.key,
+    // 属性
     props: vnode.props,
-    // 原生标签 DOM
-    // class组件 实例
+    // 不同类型的组件， stateNode也不同
+    // 原生标签 dom节点
+    // class 实例
     stateNode: null,
 
     // 第一个子fiber
     child: null,
-    // 下一个兄弟fiber
+    // 下一个兄弟节点
     sibling: null,
     return: returnFiber,
 
-    // 标记fiber任务类型，节点插入、更新、删除
     flags: Placement,
 
+    // 记录节点在当前层级下的位置
     index: null,
-
-    // old fiber
-    alternate: null,
   };
 
-  // 判断tag，判断fiber任务节点类型
   const { type } = vnode;
+
   if (isStr(type)) {
-    // 原生标签
     fiber.tag = HostComponent;
   } else if (isFn(type)) {
-    // 函数组件、类组件
+    // todo 函数以及类组件
     fiber.tag = type.prototype.isReactComponent
       ? ClassComponent
       : FunctionComponent;
