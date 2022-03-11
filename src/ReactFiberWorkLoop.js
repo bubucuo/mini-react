@@ -13,7 +13,7 @@ import {
   HostText,
 } from "./ReactWorkTags";
 import { scheduleCallback } from "./scheduler";
-import { Placement } from "./utils";
+import { Placement, Update, updateNode } from "./utils";
 
 let wip = null; // work in progress 当前正在工作中的
 let wipRoot = null;
@@ -103,6 +103,12 @@ function commitWorker(wip) {
   if (flags & Placement && stateNode) {
     parentNode.appendChild(stateNode);
   }
+
+  if (flags & Update && stateNode) {
+    // 更新属性
+    updateNode(stateNode, wip.alternate.props, wip.props);
+  }
+
   // 2. 提交子节点
   commitWorker(wip.child);
   // 3. 提交兄弟

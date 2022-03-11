@@ -1,11 +1,12 @@
+import { renderWithHooks } from "./hooks";
 import { createFiber } from "./ReactFiber";
-import { isArray, isStringOrNumber, updateNode } from "./utils";
+import { isArray, isStringOrNumber, Update, updateNode } from "./utils";
 
 // 原生标签
 export function updateHostComponent(wip) {
   if (!wip.stateNode) {
     wip.stateNode = document.createElement(wip.type);
-    updateNode(wip.stateNode, wip.props);
+    updateNode(wip.stateNode, {}, wip.props);
   }
 
   reconcileChildren(wip, wip.props.children);
@@ -13,6 +14,8 @@ export function updateHostComponent(wip) {
 }
 
 export function updateFunctionComponent(wip) {
+  renderWithHooks(wip);
+
   const { type, props } = wip;
 
   const children = type(props);
@@ -36,12 +39,16 @@ export function updateHostTextComponent(wip) {
 }
 
 // 协调（diff）
+// abc
+// bc
 function reconcileChildren(wip, children) {
   if (isStringOrNumber(children)) {
     return;
   }
 
   const newChildren = isArray(children) ? children : [children];
+  // oldfiber的头结点
+  let oldFiber = wip.alternate?.child;
   let previousNewFiber = null;
   for (let i = 0; i < newChildren.length; i++) {
     const newChild = newChildren[i];
@@ -49,6 +56,19 @@ function reconcileChildren(wip, children) {
       continue;
     }
     const newFiber = createFiber(newChild, wip);
+    const same = sameNode(newFiber, oldFiber);
+
+    if (same) {
+      Object.assign(newFiber, {
+        stateNode: oldFiber.stateNode,
+        alternate: oldFiber,
+        flags: Update,
+      });
+    }
+
+    if (oldFiber) {
+      oldFiber = oldFiber.sibling;
+    }
 
     if (previousNewFiber === null) {
       // head node
@@ -59,4 +79,9 @@ function reconcileChildren(wip, children) {
 
     previousNewFiber = newFiber;
   }
+}
+
+// 节点复用的条件：1. 同一层级下 2. 类型相同 3. key相同
+function sameNode(a, b) {
+  return a && b && a.type === b.type && a.key === b.key;
 }
