@@ -38,6 +38,16 @@ export function updateHostTextComponent(wip) {
   wip.stateNode = document.createTextNode(wip.props.children);
 }
 
+// returnFiber.deletions = [a,b,c]
+function deleteChild(returnFiber, childToDelete) {
+  const deletions = returnFiber.deletions;
+  if (deletions) {
+    returnFiber.deletions.push(childToDelete);
+  } else {
+    returnFiber.deletions = [childToDelete];
+  }
+}
+
 // 协调（diff）
 // abc
 // bc
@@ -64,6 +74,10 @@ function reconcileChildren(wip, children) {
         alternate: oldFiber,
         flags: Update,
       });
+    }
+
+    if (!same && oldFiber) {
+      deleteChild(wip, oldFiber);
     }
 
     if (oldFiber) {

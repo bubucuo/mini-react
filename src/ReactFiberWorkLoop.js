@@ -109,6 +109,11 @@ function commitWorker(wip) {
     updateNode(stateNode, wip.alternate.props, wip.props);
   }
 
+  if (wip.deletions) {
+    // 删除wip的子节点
+    commitDeletions(wip.deletions, stateNode || parentNode);
+  }
+
   // 2. 提交子节点
   commitWorker(wip.child);
   // 3. 提交兄弟
@@ -123,4 +128,21 @@ function getParentNode(wip) {
     }
     tem = tem.return;
   }
+}
+
+function commitDeletions(deletions, parentNode) {
+  for (let i = 0; i < deletions.length; i++) {
+    parentNode.removeChild(getStateNode(deletions[i]));
+  }
+}
+
+// 不是每个fiber都有dom节点
+function getStateNode(fiber) {
+  let tem = fiber;
+
+  while (!tem.stateNode) {
+    tem = tem.child;
+  }
+
+  return tem.stateNode;
 }
