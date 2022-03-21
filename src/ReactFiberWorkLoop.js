@@ -97,7 +97,7 @@ function commitWorker(wip) {
 
   // 1. 提交自己
   // parentNode是父DOM节点
-  // ?
+
   const parentNode = getParentNode(wip.return); /// wip.return.stateNode;
   const { flags, stateNode } = wip;
   if (flags & Placement && stateNode) {
