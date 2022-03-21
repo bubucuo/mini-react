@@ -7,7 +7,7 @@ import "./index.css";
 
 function FunctionComponent(props) {
   const [count, setCount] = useReducer((x) => x + 1, 0);
-  const [count2, setCount2] = useState(4);
+  const [count2, setCount2] = useState(0);
 
   return (
     <div className="border">
@@ -15,11 +15,7 @@ function FunctionComponent(props) {
       <button onClick={() => setCount()}>{count}</button>
       <button
         onClick={() => {
-          if (count2 === 0) {
-            setCount2(4);
-          } else {
-            setCount2(count2 - 2);
-          }
+          setCount2(count2 + 1);
         }}
       >
         {count2}
@@ -29,7 +25,7 @@ function FunctionComponent(props) {
 
       <ul>
         {[0, 1, 2, 3, 4].map((item) => {
-          return count2 >= item ? <li key={item}>{item}</li> : null;
+          return count2 === 2 && item === 2 ? null : <li key={item}>{item}</li>;
         })}
       </ul>
     </div>

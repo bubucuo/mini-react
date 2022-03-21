@@ -1,5 +1,5 @@
 import { createFiber } from "./ReactFiber";
-import { isArray, isStringOrNumber, Update } from "./utils";
+import { isArray, isStringOrNumber, Placement, Update } from "./utils";
 
 // returnFiber.deletions = [a,b,c]
 function deleteChild(returnFiber, childToDelete) {
@@ -20,9 +20,23 @@ function deleteRemainingChildren(returnFiber, currentFirstChild) {
   }
 }
 
+function placeChild(
+  newFiber,
+  lastPlacedIndex,
+  newIndex,
+  shouldTrackSideEffects
+) {
+  newFiber.index = newFiber;
+  if (!shouldTrackSideEffects) {
+    // 初次渲染
+    return lastPlacedIndex;
+  }
+}
+
 // 协调（diff）
 // abc
 // bc
+
 export function reconcileChildren(returnFiber, children) {
   if (isStringOrNumber(children)) {
     return;
@@ -31,41 +45,79 @@ export function reconcileChildren(returnFiber, children) {
   const newChildren = isArray(children) ? children : [children];
   // oldfiber的头结点
   let oldFiber = returnFiber.alternate?.child;
+
+  // 更新true，初次渲染是false
+  let shouldTrackSideEffects = !!returnFiber.alternate;
+
   let previousNewFiber = null;
   let newIndex = 0;
-  for (newIndex = 0; newIndex < newChildren.length; newIndex++) {
-    const newChild = newChildren[newIndex];
-    if (newChild == null) {
-      continue;
-    }
-    const newFiber = createFiber(newChild, returnFiber);
-    const same = sameNode(newFiber, oldFiber);
+  // 上次插入节点的位置
+  let lastPlacedIndex = 0;
 
-    if (same) {
-      Object.assign(newFiber, {
-        stateNode: oldFiber.stateNode,
-        alternate: oldFiber,
-        flags: Update,
-      });
-    }
+  if (!oldFiber) {
+    // 初次渲染
+    for (; newIndex < newChildren.length; newIndex++) {
+      const newChild = newChildren[newIndex];
+      if (newChild == null) {
+        continue;
+      }
+      const newFiber = createFiber(newChild, returnFiber);
 
-    if (!same && oldFiber) {
-      deleteChild(returnFiber, oldFiber);
-    }
+      lastPlacedIndex = placeChild(
+        newFiber,
+        lastPlacedIndex,
+        newIndex,
+        shouldTrackSideEffects
+      );
 
-    if (oldFiber) {
-      oldFiber = oldFiber.sibling;
-    }
+      if (previousNewFiber === null) {
+        // head node
+        returnFiber.child = newFiber;
+      } else {
+        previousNewFiber.sibling = newFiber;
+      }
 
-    if (previousNewFiber === null) {
-      // head node
-      returnFiber.child = newFiber;
-    } else {
-      previousNewFiber.sibling = newFiber;
+      previousNewFiber = newFiber;
     }
 
-    previousNewFiber = newFiber;
+    return;
   }
+
+  //   for (newIndex = 0; newIndex < newChildren.length; newIndex++) {
+  //     const newChild = newChildren[newIndex];
+  //     if (newChild == null) {
+  //       continue;
+  //     }
+  //     const newFiber = createFiber(newChild, returnFiber);
+  //     const same = sameNode(newFiber, oldFiber);
+
+  //     if (same) {
+  //       Object.assign(newFiber, {
+  //         stateNode: oldFiber.stateNode,
+  //         alternate: oldFiber,
+  //         flags: Update,
+  //       });
+  //     }
+
+  //     if (!same && oldFiber) {
+  //       deleteChild(returnFiber, oldFiber);
+  //     }
+
+  //     console.log("newfiber", newFiber); //sy-log
+
+  //     if (oldFiber) {
+  //       oldFiber = oldFiber.sibling;
+  //     }
+
+  //     if (previousNewFiber === null) {
+  //       // head node
+  //       returnFiber.child = newFiber;
+  //     } else {
+  //       previousNewFiber.sibling = newFiber;
+  //     }
+
+  //     previousNewFiber = newFiber;
+  //   }
 
   // 如果新节点遍历完了，但是(多个)老节点还有，（多个）老节点要被删除
   if (newIndex === newChildren.length) {
