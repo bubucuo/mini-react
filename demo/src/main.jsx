@@ -24,9 +24,21 @@ function FunctionComponent(props) {
       {count % 2 ? <div>omg</div> : <span>123</span>}
 
       <ul>
-        {[0, 1, 2, 3, 4].map((item) => {
-          return count2 === 2 && item === 2 ? null : <li key={item}>{item}</li>;
-        })}
+        {count2 === 2
+          ? [0, 1, 3, 4].map((item) => {
+              return <li key={item}>{item}</li>;
+            })
+          : [0, 1, 2, 3, 4].map((item) => {
+              return <li key={item}>{item}</li>;
+            })}
+
+        {/* {count2 === 2
+          ? [2, 1, 3, 4].map((item) => {
+              return <li key={item}>{item}</li>;
+            })
+          : [0, 1, 2, 3, 4].map((item) => {
+              return <li key={item}>{item}</li>;
+            })} */}
       </ul>
     </div>
   );

@@ -20,6 +20,21 @@ function deleteRemainingChildren(returnFiber, currentFirstChild) {
   }
 }
 
+// 初次渲染，只是记录下标
+// 更新，检查节点是否移动
+function placeChild(
+  newFiber,
+  lastPlacedIndex,
+  newIndex,
+  shouldTrackSideEffects
+) {
+  newFiber.index = newIndex;
+  if (!shouldTrackSideEffects) {
+    // 初次渲染
+    return lastPlacedIndex;
+  }
+}
+
 // 协调（diff）
 // abc
 // bc
@@ -31,40 +46,43 @@ export function reconcileChildren(returnFiber, children) {
   const newChildren = isArray(children) ? children : [children];
   // oldfiber的头结点
   let oldFiber = returnFiber.alternate?.child;
+
+  // 用于判断是returnFiber初次渲染还是更新
+  let shouldTrackSideEffects = !!returnFiber.alternate;
   let previousNewFiber = null;
   let newIndex = 0;
-  for (newIndex = 0; newIndex < newChildren.length; newIndex++) {
-    const newChild = newChildren[newIndex];
-    if (newChild == null) {
-      continue;
-    }
-    const newFiber = createFiber(newChild, returnFiber);
-    const same = sameNode(newFiber, oldFiber);
+  // 上一次dom节点插入的最远位置
+  // old 0 1 2 3 4
+  // new 2 1 3 4
+  let lastPlacedIndex = 0;
 
-    if (same) {
-      Object.assign(newFiber, {
-        stateNode: oldFiber.stateNode,
-        alternate: oldFiber,
-        flags: Update,
-      });
-    }
+  // *3. 初次渲染
+  // 1）初次渲染
+  // 2）老节点没了，新节点
+  if (!oldFiber) {
+    for (; newIndex < newChildren.length; newIndex++) {
+      const newChild = newChildren[newIndex];
+      if (newChild == null) {
+        continue;
+      }
+      const newFiber = createFiber(newChild, returnFiber);
 
-    if (!same && oldFiber) {
-      deleteChild(returnFiber, oldFiber);
-    }
+      lastPlacedIndex = placeChild(
+        newFiber,
+        lastPlacedIndex,
+        newIndex,
+        shouldTrackSideEffects
+      );
 
-    if (oldFiber) {
-      oldFiber = oldFiber.sibling;
-    }
+      if (previousNewFiber === null) {
+        // head node
+        returnFiber.child = newFiber;
+      } else {
+        previousNewFiber.sibling = newFiber;
+      }
 
-    if (previousNewFiber === null) {
-      // head node
-      returnFiber.child = newFiber;
-    } else {
-      previousNewFiber.sibling = newFiber;
+      previousNewFiber = newFiber;
     }
-
-    previousNewFiber = newFiber;
   }
 
   if (newIndex === newChildren.length) {
