@@ -95,6 +95,8 @@ function commitWorker(wip) {
     return;
   }
 
+  // console.log("wip", wip); //sy-log
+
   // 1. 提交自己
   // parentNode是父DOM节点
 
