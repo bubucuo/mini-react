@@ -39,9 +39,10 @@ function placeChild(
   if (current) {
     const oldIndex = current.index;
     // 子节点是更新
+    // lastPlacedIndex 记录了上次dom节点的相对更新节点的最远位置
     // old 0 1 2 3 4
     // new 2 1 3 4
-    // 2 1
+    // 2 1(6) 3 4
     if (oldIndex < lastPlacedIndex) {
       // move
       newFiber.flags |= Placement;

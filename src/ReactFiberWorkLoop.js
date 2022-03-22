@@ -95,7 +95,7 @@ function commitWorker(wip) {
     return;
   }
 
-  // console.log("wip", wip); //sy-log
+  console.log("wip", wip); //sy-log
 
   // 1. 提交自己
   // parentNode是父DOM节点
@@ -103,7 +103,12 @@ function commitWorker(wip) {
   const parentNode = getParentNode(wip.return); /// wip.return.stateNode;
   const { flags, stateNode } = wip;
   if (flags & Placement && stateNode) {
-    parentNode.appendChild(stateNode);
+    // 1
+    // 0 1 2 3 4
+    // 2 1 3 4
+    const before = getHostSibling(wip.sibling);
+    insertOrAppendPlacementNode(stateNode, before, parentNode);
+    // parentNode.appendChild(stateNode);
   }
 
   if (flags & Update && stateNode) {
@@ -147,4 +152,22 @@ function getStateNode(fiber) {
   }
 
   return tem.stateNode;
+}
+
+function getHostSibling(sibling) {
+  while (sibling) {
+    if (sibling.stateNode && !(sibling.flags & Placement)) {
+      return sibling.stateNode;
+    }
+    sibling = sibling.sibling;
+  }
+  return null;
+}
+
+function insertOrAppendPlacementNode(stateNode, before, parentNode) {
+  if (before) {
+    parentNode.insertBefore(stateNode, before);
+  } else {
+    parentNode.appendChild(stateNode);
+  }
 }
