@@ -8,6 +8,14 @@ export const Update = /*                       */ 0b0000000000000000000100; // 4
 // 删除
 export const Deletion = /*                     */ 0b0000000000000000001000; // 8
 
+//*******************************************************************************************
+
+// ! HookFlags
+export const HookLayout = /*    */ 0b010;
+export const HookPassive = /*   */ 0b100;
+
+//*******************************************************************************************
+
 export function isStr(s) {
   return typeof s === "string";
 }
@@ -64,4 +72,19 @@ export function updateNode(node, prevVal, nextVal) {
         node[k] = nextVal[k];
       }
     });
+}
+
+export function areHookInputsEqual(nextDeps, prevDeps) {
+  if (prevDeps == null) {
+    return false;
+  }
+
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (Object.is(nextDeps[i], prevDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+
+  return true;
 }
