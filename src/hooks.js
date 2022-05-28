@@ -85,7 +85,10 @@ export function useReducer(reducer, initalState) {
 }
 
 function dispatchReducerAction(fiber, hook, reducer, action) {
-  hook.memorizedState = reducer ? reducer(hook.memorizedState) : action;
+    ? reducer(hook.memorizedState, action)
+    : typeof action === "function"
+    ? action(hook.memorizedState)
+    : action;
   fiber.alternate = { ...fiber };
   fiber.sibling = null;
   scheduleUpdateOnFiber(fiber);
