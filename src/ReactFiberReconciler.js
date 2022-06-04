@@ -1,38 +1,38 @@
-import { renderWithHooks } from "./hooks";
-import { reconcileChildren } from "./ReactChildFiber";
-import { updateNode } from "./utils";
+import { createFiber } from "./ReactFiber";
+import { isArray, isStringOrNumber, updateNode } from "./utils";
 
-// 原生标签
 export function updateHostComponent(wip) {
   if (!wip.stateNode) {
+    // 创建节点
     wip.stateNode = document.createElement(wip.type);
-    updateNode(wip.stateNode, {}, wip.props);
   }
-
+  updateNode(wip.stateNode, wip.props);
   reconcileChildren(wip, wip.props.children);
 }
 
-export function updateFunctionComponent(wip) {
-  renderWithHooks(wip);
+// 初次渲染
+// 协调 伪diff
+// old abc
+// new bc
+function reconcileChildren(wip, children) {
+  if (isStringOrNumber(children)) {
+    return;
+  }
+  const newChildren = isArray(children) ? children : [children];
 
-  const { type, props } = wip;
+  let previousNewFiber = null;
+  for (let i = 0; i < newChildren.length; i++) {
+    const newChild = newChildren[i];
+    if (newChild == null) {
+      continue;
+    }
+    const newFiber = createFiber(newChild, wip);
+    if (previousNewFiber == null) {
+      wip.child = newFiber;
+    } else {
+      previousNewFiber.sibling = newFiber;
+    }
 
-  const children = type(props);
-  reconcileChildren(wip, children);
-}
-
-export function updateClassComponent(wip) {
-  const { type, props } = wip;
-  const instance = new type(props);
-  const children = instance.render();
-
-  reconcileChildren(wip, children);
-}
-
-export function updateFragmentComponent(wip) {
-  reconcileChildren(wip, wip.props.children);
-}
-
-export function updateHostTextComponent(wip) {
-  wip.stateNode = document.createTextNode(wip.props.children);
+    previousNewFiber = newFiber;
+  }
 }

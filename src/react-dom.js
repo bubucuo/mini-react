@@ -6,7 +6,6 @@ function ReactDOMRoot(internalRoot) {
 }
 
 ReactDOMRoot.prototype.render = function (children) {
-  // console.log("children", children); //sy-log
   const root = this._internalRoot;
   updateContainer(children, root);
 };
@@ -17,14 +16,15 @@ function updateContainer(element, container) {
     type: containerInfo.nodeName.toLocaleLowerCase(),
     stateNode: containerInfo,
   });
-  // 组件初次渲染
   scheduleUpdateOnFiber(fiber);
 }
 
 function createRoot(container) {
   const root = { containerInfo: container };
-
   return new ReactDOMRoot(root);
 }
 
 export default { createRoot };
+
+// DebugReact获取方式：关注公众号“bubucuo”，回复debug
+// 今天的mini获取方式：关注公众号“bubucuo”，回复5.28

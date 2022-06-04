@@ -1,11 +1,5 @@
-import {
-  ClassComponent,
-  Fragment,
-  FunctionComponent,
-  HostComponent,
-  HostText,
-} from "./ReactWorkTags";
-import { isFn, isStr, isUndefined, Placement } from "./utils";
+import { FunctionComponent, HostComponent } from "./ReactWorkTags";
+import { isFn, isStr, Placement } from "./utils";
 
 export function createFiber(vnode, returnFiber) {
   const fiber = {
@@ -14,44 +8,38 @@ export function createFiber(vnode, returnFiber) {
     key: vnode.key,
     // 属性
     props: vnode.props,
-    // 不同类型的组件， stateNode也不同
     // 原生标签 dom节点
-    // class 实例
+    // 函数组件
+    // 类组件 实例
     stateNode: null,
 
-    // 第一个子fiber
+    // 第一个子节点 fiber
     child: null,
-    // 下一个兄弟节点
+    // 下一个兄弟fiber
     sibling: null,
+    // 父fiber
     return: returnFiber,
 
-    flags: Placement,
-
-    // 记录节点在当前层级下的位置
+    // 记录位置
     index: null,
-
     // old fiber
     alternate: null,
-
-    // 函数组件存的是hook0
-    memorizedState: null,
+    // 标记fiber effect，比如插入、更新
+    flags: Placement,
   };
 
+  // 判断组件类型
   const { type } = vnode;
-
   if (isStr(type)) {
     fiber.tag = HostComponent;
   } else if (isFn(type)) {
-    // todo 函数以及类组件
-    fiber.tag = type.prototype.isReactComponent
-      ? ClassComponent
-      : FunctionComponent;
-  } else if (isUndefined(type)) {
-    fiber.tag = HostText;
-    fiber.props = { children: vnode };
+    // ?
+    // fiber.tag = FunctionComponent
   } else {
-    fiber.tag = Fragment;
+    //   Fragment
   }
 
   return fiber;
 }
+
+// props属性 state状态
