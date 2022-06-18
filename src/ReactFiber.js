@@ -1,5 +1,5 @@
-import { FunctionComponent, HostComponent } from "./ReactWorkTags";
-import { isFn, isStr, Placement } from "./utils";
+import {FunctionComponent, HostComponent} from "./ReactWorkTags";
+import {isFn, isStr, Placement} from "./utils";
 
 export function createFiber(vnode, returnFiber) {
   const fiber = {
@@ -29,12 +29,13 @@ export function createFiber(vnode, returnFiber) {
   };
 
   // 判断组件类型
-  const { type } = vnode;
+  const {type} = vnode;
   if (isStr(type)) {
+    // 原生标签
     fiber.tag = HostComponent;
   } else if (isFn(type)) {
-    // ?
-    // fiber.tag = FunctionComponent
+    // ? 类组件
+    fiber.tag = FunctionComponent;
   } else {
     //   Fragment
   }

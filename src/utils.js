@@ -26,12 +26,34 @@ export function isUndefined(s) {
   return s === undefined;
 }
 
-export function updateNode(node, nextVal) {
+// {id: 'red'}
+// {className:'green}
+// fake 合成事件
+export function updateNode(node, prevVal, nextVal) {
+  // 遍历老属性
+  Object.keys(prevVal).forEach((k) => {
+    if (k === "children") {
+      if (isStringOrNumber(nextVal[k])) {
+        node.textContent = "";
+      }
+    } else if (k.slice(0, 2) === "on") {
+      const eventName = k.slice(2).toLocaleLowerCase();
+      node.removeEventListener(eventName, prevVal[k]);
+    } else {
+      if (!(k in nextVal)) {
+        node[k] = "";
+      }
+    }
+  });
+
   Object.keys(nextVal).forEach((k) => {
     if (k === "children") {
       if (isStringOrNumber(nextVal[k])) {
         node.textContent = nextVal[k];
       }
+    } else if (k.slice(0, 2) === "on") {
+      const eventName = k.slice(2).toLocaleLowerCase();
+      node.addEventListener(eventName, nextVal[k]);
     } else {
       node[k] = nextVal[k];
     }

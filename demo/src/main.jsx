@@ -1,16 +1,8 @@
 // import React from "react";
 // import ReactDOM from "react-dom";
-import { ReactDOM } from "../which-react";
+import {ReactDOM, useReducer} from "../which-react";
 
 import "./index.css";
-
-// function FunctionComponent(props) {
-//   return (
-//     <div className="border">
-//       <p>{props.name}</p>
-//     </div>
-//   );
-// }
 
 // class ClassComponent extends Component {
 //   render() {
@@ -34,11 +26,25 @@ import "./index.css";
 //   );
 // }
 
+// fiber
+// fiber.memorizedState(hook0)->next(hook1)->next(hook2)->next(hook3)
+// workInProgressHook = hook3
+function FunctionComponent(props) {
+  const [state, dispatch] = useReducer((x) => x + 1, 0);
+
+  return (
+    <div className="border">
+      <p>{props.name}</p>
+      <button onClick={() => dispatch()}>{state}</button>
+    </div>
+  );
+}
+
 const jsx = (
   <div className="border">
     <h1>react</h1>
     <a href="https://github.com/bubucuo/mini-react">mini react</a>
-    {/* <FunctionComponent name="函数组件" /> */}
+    <FunctionComponent name="函数组件" />
     {/* <ClassComponent name="类组件" /> */}
     {/* <FragmentComponent /> */}
   </div>
@@ -49,8 +55,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(jsx);
 // 实现了常见组件初次渲染
 
 // 原生标签
-// todo diff
 // 函数组件
+// todo diff
 // 类组件
 // 文本
 // Fragment
