@@ -1,5 +1,5 @@
-import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
-import { areHookInputsEqual, HookLayout, HookPassive } from "./utils";
+import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
+import {areHookInputsEqual, HookLayout, HookPassive} from "./utils";
 
 let currentlyRenderingFiber = null;
 let workInProgressHook = null;
@@ -85,11 +85,12 @@ export function useReducer(reducer, initalState) {
 }
 
 function dispatchReducerAction(fiber, hook, reducer, action) {
+  hook.memorizedState = reducer
     ? reducer(hook.memorizedState, action)
     : typeof action === "function"
     ? action(hook.memorizedState)
     : action;
-  fiber.alternate = { ...fiber };
+  fiber.alternate = {...fiber};
   fiber.sibling = null;
   scheduleUpdateOnFiber(fiber);
 }
@@ -111,7 +112,7 @@ function updateEffectImp(hooksFlags, create, deps) {
     }
   }
 
-  const effect = { hooksFlags, create, deps };
+  const effect = {hooksFlags, create, deps};
 
   hook.memorizedState = effect;
 
