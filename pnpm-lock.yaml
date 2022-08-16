@@ -21,7 +21,10 @@ importers:
       happy-dom: 6.0.4
 
   packages/scheduler:
-    specifiers: {}
+    specifiers:
+      scheduler: workspace:*
+    dependencies:
+      scheduler: 'link:'
 
   packages/shared:
     specifiers: {}

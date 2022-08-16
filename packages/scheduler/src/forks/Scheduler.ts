@@ -17,7 +17,7 @@ import {
   NormalPriority,
   LowPriority,
   IdlePriority,
-} from "../SchedulerPriorities";
+} from "./SchedulerPriorities";
 import {
   markTaskRun,
   markTaskYield,

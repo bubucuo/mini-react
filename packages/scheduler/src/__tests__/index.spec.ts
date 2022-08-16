@@ -1,6 +1,8 @@
 import {beforeEach, describe, expect, test, afterEach, it} from "vitest";
+import * as Scheduler from "scheduler";
 
-let Scheduler;
+
+// let Scheduler;
 let runtime;
 let performance;
 let cancelCallback;
@@ -170,7 +172,9 @@ describe("SchedulerBrowser", () => {
     // jest.unmock("scheduler");
 
     performance = global.performance;
-    Scheduler = require("scheduler");
+    // Scheduler = require("scheduler");
+
+
     cancelCallback = Scheduler.unstable_cancelCallback;
     scheduleCallback = Scheduler.unstable_scheduleCallback;
     NormalPriority = Scheduler.unstable_NormalPriority;

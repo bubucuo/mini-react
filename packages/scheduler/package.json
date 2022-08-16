@@ -2,16 +2,12 @@
   "name": "scheduler",
   "version": "1.0.0",
   "description": "Cooperative scheduler for the browser environment.",
-  "main": "index.js",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/bubucuo/mini-react.git",
-    "directory": "packages/scheduler"
-  },
+  "main": "index.ts",
   "scripts": {
     "test": "vitest"
   },
   "dependencies": {
+    "scheduler": "workspace:*"
   },
   "keywords": [
     "react"
