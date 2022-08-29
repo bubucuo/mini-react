@@ -5,26 +5,48 @@ importers:
   .:
     specifiers:
       vite: ^3.0.7
-      vitest: ^0.22.0
     dependencies:
       vite: 3.0.7
-    devDependencies:
-      vitest: 0.22.0
 
   packages/react:
     specifiers:
       happy-dom: ^6.0.4
+      react-reconciler: workspace:*
       shared: workspace:*
+      vitest: ^0.22.0
     dependencies:
+      react-reconciler: link:../react-reconciler
       shared: link:../shared
     devDependencies:
       happy-dom: 6.0.4
+      vitest: 0.22.0_happy-dom@6.0.4
+
+  packages/react-dom:
+    specifiers:
+      react-reconciler: workspace:*
+      shared: workspace:*
+    dependencies:
+      react-reconciler: link:../react-reconciler
+      shared: link:../shared
+
+  packages/react-reconciler:
+    specifiers: {}
+
+  packages/react-tem:
+    specifiers:
+      happy-dom: ^6.0.4
+      react-reconciler: workspace:*
+      shared: workspace:*
+      vitest: ^0.22.0
+    dependencies:
+      react-reconciler: link:../react-reconciler
+      shared: link:../shared
+    devDependencies:
+      happy-dom: 6.0.4
+      vitest: 0.22.0_happy-dom@6.0.4
 
   packages/scheduler:
-    specifiers:
-      scheduler: workspace:*
-    dependencies:
-      scheduler: 'link:'
+    specifiers: {}
 
   packages/shared:
     specifiers: {}
@@ -52,13 +74,13 @@ packages:
   /@types/concat-stream/1.6.1:
     resolution: {integrity: sha512-eHE4cQPoj6ngxBZMvVf6Hw7Mh4jMW4U9lpGmS5GBPB9RYxlFg+CHaVN7ErNY4W9XfLIEn20b4VDYaIrbq0q4uA==}
     dependencies:
-      '@types/node': 18.7.5
+      '@types/node': 8.10.66
     dev: true
 
   /@types/form-data/0.0.33:
     resolution: {integrity: sha512-8BSvG1kGm83cyJITQMZSulnl6QV8jqAGreJsc5tPu1Jq0vTSOiY/k24Wx82JRpWwZSqrala6sd5rWi6aNXvqcw==}
     dependencies:
-      '@types/node': 18.7.5
+      '@types/node': 8.10.66
     dev: true
 
   /@types/node/10.17.60:
@@ -689,7 +711,7 @@ packages:
     optionalDependencies:
       fsevents: 2.3.2
 
-  /vitest/0.22.0:
+  /vitest/0.22.0_happy-dom@6.0.4:
     resolution: {integrity: sha512-BSIro/QOHLaQY08FHwT6THWhqLQ+VPU+N4Rdo4pcP+16XB6oLmNNAXGcSh/MOLUhfUy+mqCwx7AyKmU7Ms5R+g==}
     engines: {node: '>=v14.16.0'}
     hasBin: true
@@ -716,6 +738,7 @@ packages:
       '@types/node': 18.7.5
       chai: 4.3.6
       debug: 4.3.4
+      happy-dom: 6.0.4
       local-pkg: 0.4.2
       tinypool: 0.2.4
       tinyspy: 1.0.0

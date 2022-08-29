@@ -4,15 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "vitest"
+    "preinstall": "node ./scripts/preinstall.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "vite": "^3.0.7"
-  },
-  "devDependencies": {
-    "vitest": "^0.22.0"
   }
 }

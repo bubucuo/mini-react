@@ -1,15 +1,9 @@
-import {hello} from 'shared'
+import {Component} from "./ReactBaseClasses";
+import {
+  useReducer,
+  useState,
+  useEffect,
+  useLayoutEffect,
+} from "react-reconciler";
 
-export default function(document) {
-    console.log('Hello Vite')
-    console.log(hello)
-
-    const e = document.createElement("h1");
-    e.className = "c1";
-    e.innerHTML = "🚗 Hello Vite"
-    document.body.appendChild(e);
-}
-
-
-
-
+export {Component, useReducer, useState, useEffect, useLayoutEffect};
