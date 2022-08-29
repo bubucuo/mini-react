@@ -1,5 +1,7 @@
+import {enqueueUpdate} from "./ReactFiberClassUpdateQueue";
 import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
 import {areHookInputsEqual, HookLayout, HookPassive} from "./utils";
+// import {enqueueUpdate} from "./ReactFiberReconciler";
 
 let currentlyRenderingFiber = null;
 let workInProgressHook = null;
@@ -60,20 +62,6 @@ export function useReducer(reducer, initalState) {
     hook.memorizedState = initalState;
   }
 
-  //   let dispatch = store.dispatch;
-  //   const midApi = {
-  //     getState: store.getState(),
-  //     // dispatch,
-  //     dispatch: (action, ...args) => dispatch(action, ...args),
-  //   };
-  //   dispatch
-  //   const dispatch = () => {
-  //     hook.memorizedState = reducer(hook.memorizedState);
-  //     currentlyRenderingFiber.alternate = { ...currentlyRenderingFiber };
-  //     scheduleUpdateOnFiber(currentlyRenderingFiber);
-  //     console.log("log"); //sy-log
-  //   };
-
   const dispatch = dispatchReducerAction.bind(
     null,
     currentlyRenderingFiber,
@@ -92,7 +80,8 @@ function dispatchReducerAction(fiber, hook, reducer, action) {
     : action;
   fiber.alternate = {...fiber};
   fiber.sibling = null;
-  scheduleUpdateOnFiber(fiber);
+  // const root = enqueueUpdate();
+  scheduleUpdateOnFiber(null, fiber);
 }
 
 export function useState(initalState) {

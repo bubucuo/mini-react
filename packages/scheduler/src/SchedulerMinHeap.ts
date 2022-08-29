@@ -1,18 +1,39 @@
+export type Heap = Array<Node>;
+// type Node = any;
+
+export type Node =
+  | {
+      id: number;
+      sortIndex: number;
+    }
+  | {
+      id: number;
+      sortIndex: number;
+
+      callback: Function;
+
+      priorityLevel: number;
+
+      startTime: Date;
+
+      expirationTime: Date;
+    };
+
 // 返回最小堆堆顶元素
-export function peek(heap) {
+export function peek(heap: Heap): Node | null {
   return heap.length === 0 ? null : heap[0];
 }
 
 // 往最小堆中插入元素
 // 1. 把node插入数组尾部
 // 2. 往上调整最小堆
-export function push(heap, node) {
+export function push(heap: Heap, node: Node): void {
   let index = heap.length;
   heap.push(node);
   siftUp(heap, node, index);
 }
 
-function siftUp(heap, node, i) {
+function siftUp(heap: Heap, node: Node, i: number): void {
   let index = i;
 
   while (index > 0) {
@@ -32,22 +53,22 @@ function siftUp(heap, node, i) {
 // 删除堆顶元素
 // 1. 最后一个元素覆盖堆顶
 // 2. 向下调整
-export function pop(heap) {
+export function pop(heap: Heap): Node | null {
   if (heap.length === 0) {
     return null;
   }
-  const fisrt = heap[0];
+  const first = heap[0];
   const last = heap.pop();
 
-  if (fisrt !== last) {
+  if (first !== last && last !== undefined) {
     heap[0] = last;
     siftDown(heap, last, 0);
   }
 
-  return fisrt;
+  return first;
 }
 
-function siftDown(heap, node, i) {
+function siftDown(heap: Heap, node: Node, i: number): void {
   let index = i;
   const len = heap.length;
   const halfLen = len >> 1;
@@ -84,20 +105,7 @@ function siftDown(heap, node, i) {
   }
 }
 
-function compare(a, b) {
-  //   return a - b;
+function compare(a: Node, b: Node): number {
   const diff = a.sortIndex - b.sortIndex;
   return diff !== 0 ? diff : a.id - b.id;
 }
-
-// const a = [3, 7, 4, 10, 12, 9, 6, 15, 14];
-
-// push(a, 8);
-
-// while (1) {
-//   if (a.length === 0) {
-//     break;
-//   }
-//   console.log("a", peek(a)); //sy-log
-//   pop(a);
-// }

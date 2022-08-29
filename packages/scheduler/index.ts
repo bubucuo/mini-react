@@ -1,49 +1,51 @@
-import { peek, pop, push } from "./minHeap";
+// import {peek, pop, push} from "./src/SchedulerMinHeap";
 
-let taskQueue = [];
-let taskIdCounter = 1;
+// let taskQueue = [];
+// let taskIdCounter = 1;
 
-export function scheduleCallback(callback) {
-  const currentTime = getCurrntTime();
+// export function scheduleCallback(callback) {
+//   const currentTime = getCurrntTime();
 
-  const timeout = -1;
+//   const timeout = -1;
 
-  const expirtationTime = currentTime - timeout;
+//   const expirtationTime = currentTime - timeout;
 
-  const newTask = {
-    id: taskIdCounter++,
-    callback,
-    expirtationTime,
-    sortIndex: expirtationTime,
-  };
+//   const newTask = {
+//     id: taskIdCounter++,
+//     callback,
+//     expirtationTime,
+//     sortIndex: expirtationTime,
+//   };
 
-  push(taskQueue, newTask);
+//   push(taskQueue, newTask);
 
-  // 请求调度
-  requestHostCallback();
-}
+//   // 请求调度
+//   requestHostCallback();
+// }
 
-function requestHostCallback() {
-  port.postMessage(null);
-}
+// function requestHostCallback() {
+//   port.postMessage(null);
+// }
 
-const channel = new MessageChannel();
-const port = channel.port2;
-channel.port1.onmessage = function () {
-  workLoop();
-};
+// const channel = new MessageChannel();
+// const port = channel.port2;
+// channel.port1.onmessage = function () {
+//   workLoop();
+// };
 
-function workLoop() {
-  let currentTask = peek(taskQueue);
-  while (currentTask) {
-    const callback = currentTask.callback;
-    currentTask.callback = null;
-    callback();
-    pop(taskQueue);
-    currentTask = peek(taskQueue);
-  }
-}
+// function workLoop() {
+//   let currentTask = peek(taskQueue);
+//   while (currentTask) {
+//     const callback = currentTask.callback;
+//     currentTask.callback = null;
+//     callback();
+//     pop(taskQueue);
+//     currentTask = peek(taskQueue);
+//   }
+// }
 
-export function getCurrntTime() {
-  return performance.now();
-}
+// export function getCurrntTime() {
+//   return performance.now();
+// }
+
+export * from "./src/Scheduler";
