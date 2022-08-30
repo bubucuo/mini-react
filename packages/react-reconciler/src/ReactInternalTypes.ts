@@ -1,7 +1,9 @@
 import type {WorkTag} from "./ReactWorkTags";
 
 import type {Flags} from "./ReactFiberFlags";
-import type {Lanes} from "./ReactFiberLane";
+import type {LaneMap, Lanes} from "./ReactFiberLane";
+import type {Container} from "react-dom/client/ReactDOMHostConfig";
+import {RootTag} from "./ReactFiberRoot";
 
 export type Fiber = {
   tag: WorkTag;
@@ -31,10 +33,20 @@ export type Fiber = {
 
   lanes: Lanes;
 
+  current: Fiber;
   alternate: Fiber | null;
 
   // todo
   props: any;
 };
 
-export type FiberRoot = {containerInfo: any};
+export type FiberRoot = {
+  tag: RootTag;
+
+  containerInfo: Container;
+  current: Fiber;
+
+  eventTimes: LaneMap<number>;
+
+  pendingLanes: Lanes;
+};

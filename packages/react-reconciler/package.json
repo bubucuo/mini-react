@@ -8,7 +8,9 @@
   },
   "dependencies": {
     "shared": "workspace:*",
-    "scheduler": "workspace:*"
+    "scheduler": "workspace:*",
+    "react-dom": "workspace:*"
+
   },
   "keywords": [],
   "author": "",

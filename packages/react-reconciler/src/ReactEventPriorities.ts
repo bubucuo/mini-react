@@ -1,4 +1,4 @@
-import type {Lane, Lanes} from "./ReactFiberLane";
+import {getHighestPriorityLane, Lane, Lanes} from "./ReactFiberLane";
 
 import {
   NoLane,
@@ -6,6 +6,7 @@ import {
   InputContinuousLane,
   DefaultLane,
   IdleLane,
+  includesNonIdleWork,
 } from "./ReactFiberLane";
 
 export type EventPriority = Lane;
@@ -56,16 +57,16 @@ export function isHigherEventPriority(
   return a !== 0 && a < b;
 }
 
-// export function lanesToEventPriority(lanes: Lanes): EventPriority {
-//   const lane = getHighestPriorityLane(lanes);
-//   if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
-//     return DiscreteEventPriority;
-//   }
-//   if (!isHigherEventPriority(ContinuousEventPriority, lane)) {
-//     return ContinuousEventPriority;
-//   }
-//   if (includesNonIdleWork(lane)) {
-//     return DefaultEventPriority;
-//   }
-//   return IdleEventPriority;
-// }
+export function lanesToEventPriority(lanes: Lanes): EventPriority {
+  const lane = getHighestPriorityLane(lanes);
+  if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
+    return DiscreteEventPriority;
+  }
+  if (!isHigherEventPriority(ContinuousEventPriority, lane)) {
+    return ContinuousEventPriority;
+  }
+  if (includesNonIdleWork(lane)) {
+    return DefaultEventPriority;
+  }
+  return IdleEventPriority;
+}

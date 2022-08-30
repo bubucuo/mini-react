@@ -113,9 +113,11 @@ importers:
 
   packages/react-reconciler:
     specifiers:
+      react-dom: workspace:*
       scheduler: workspace:*
       shared: workspace:*
     dependencies:
+      react-dom: link:../react-dom
       scheduler: link:../scheduler
       shared: link:../shared
 

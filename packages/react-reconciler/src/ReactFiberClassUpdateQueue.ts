@@ -1,6 +1,8 @@
 import {enqueueConcurrentClassUpdate} from "./ReactFiberConcurrentUpdates";
 import type {Lane, Lanes} from "./ReactFiberLane";
 import type {Fiber} from "./ReactInternalTypes";
+import {NoLanes} from "./ReactFiberLane";
+import {FiberRoot} from "./ReactInternalTypes";
 
 export type Update<State> = {
   eventTime: number;
@@ -48,7 +50,7 @@ export function enqueueUpdate<State>(
   fiber: Fiber,
   update: Update<State>,
   lane: Lane
-) {
+): FiberRoot | null {
   const updateQueue = fiber.updateQueue;
   if (updateQueue == null) {
     return null;
@@ -57,4 +59,20 @@ export function enqueueUpdate<State>(
   const shareQueue: SharedQueue<State> = updateQueue.shared;
 
   return enqueueConcurrentClassUpdate(fiber, shareQueue, update, lane);
+}
+
+export function initializeUpdateQueue<State>(fiber: Fiber): void {
+  const queue: UpdateQueue<State> = {
+    baseState: fiber.memoizedState,
+    firstBaseUpdate: null,
+    lastBaseUpdate: null,
+    shared: {
+      pending: null,
+      lanes: NoLanes,
+      hiddenCallbacks: null,
+    },
+    callbacks: null,
+  };
+
+  fiber.updateQueue = queue;
 }

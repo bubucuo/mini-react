@@ -238,6 +238,8 @@ function scheduleCallback(
       requestHostCallback(flushWork);
     }
   }
+
+  return newTask;
 }
 
 function cancelCallback(task) {

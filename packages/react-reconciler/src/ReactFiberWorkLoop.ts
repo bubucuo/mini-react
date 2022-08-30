@@ -25,9 +25,26 @@ import {
   NormalPriority as NormalSchedulerPriority,
   IdlePriority as IdleSchedulerPriority,
 } from "scheduler";
-import {Lanes, Lane, NoTimestamp} from "./ReactFiberLane";
-import {NoLanes} from "./ReactFiberLane";
+import {
+  Lanes,
+  Lane,
+  NoTimestamp,
+  markRootUpdated,
+  NoLane,
+  getNextLanes,
+  getHighestPriorityLane,
+} from "./ReactFiberLane";
+import {NoLanes, SyncLane} from "./ReactFiberLane";
 import {getCurrentEventPriority} from "../../react-dom/client/ReactDOMHostConfig";
+import {
+  DiscreteEventPriority,
+  lanesToEventPriority,
+  ContinuousEventPriority,
+  DefaultEventPriority,
+  IdleEventPriority,
+} from "./ReactEventPriorities";
+import {createWorkInProgress} from "./ReactFiber";
+import {beginWork} from "./ReactFiberBeginWork";
 
 type ExecutionContext = number;
 
@@ -36,10 +53,22 @@ const BatchedContext = /*               */ 0b001;
 const RenderContext = /*                */ 0b010;
 const CommitContext = /*                */ 0b100;
 
+type RootExitStatus = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+const RootInProgress = 0;
+const RootFatalErrored = 1;
+const RootErrored = 2;
+const RootSuspended = 3;
+const RootSuspendedWithDelay = 4;
+const RootCompleted = 5;
+const RootDidNotComplete = 6;
+
 let executionContext: ExecutionContext = NoContext;
 let workInProgress: Fiber | null = null; // work in progress 当前正在工作中的
 let workInProgressRoot: FiberRoot | null = null;
 let workInProgressRootRenderLanes: Lanes = NoLanes;
+
+let workInProgressRootExitStatus: RootExitStatus = RootInProgress;
+
 export let renderLanes: Lanes = NoLanes;
 
 let currentEventTime: number = NoTimestamp;
@@ -76,177 +105,171 @@ export function scheduleUpdateOnFiber(
   lane: Lane,
   eventTime: number
 ) {
-  workInProgress = fiber;
-  workInProgressRoot = fiber;
+  markRootUpdated(root, lane, eventTime);
 
-  scheduleCallback(root, workLoop);
+  ensureRootIsScheduled(root, eventTime);
+}
+
+function ensureRootIsScheduled(root: FiberRoot, current: number) {
+  const existingCallbackNode = root.callbackNode;
+
+  const nextLanes = getNextLanes(
+    root,
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes
+  );
+
+  if (nextLanes === NoLanes) {
+    // Special case: There's nothing to work on.
+    if (existingCallbackNode !== null) {
+      Scheduler_cancelCallback(existingCallbackNode);
+    }
+    root.callbackNode = null;
+
+    root.callbackPriority = NoLane;
+
+    return;
+  }
+
+  // We use the highest priority lane to represent the priority of the callback.
+  const newCallbackPriority = getHighestPriorityLane(nextLanes);
+  // Check if there's an existing task. We may be able to reuse it.
+  const existingCallbackPriority = root.callbackPriority;
+
+  if (existingCallbackNode != null) {
+    // Cancel the existing callback. We'll schedule a new one below.
+    Scheduler_cancelCallback(existingCallbackNode);
+  }
+
+  // Schedule a new callback.
+
+  // concurrent
+  let schedulerPriorityLevel;
+  switch (lanesToEventPriority(nextLanes)) {
+    case DiscreteEventPriority:
+      schedulerPriorityLevel = ImmediateSchedulerPriority;
+      break;
+    case ContinuousEventPriority:
+      schedulerPriorityLevel = UserBlockingSchedulerPriority;
+      break;
+    case DefaultEventPriority:
+      schedulerPriorityLevel = NormalSchedulerPriority;
+      break;
+    case IdleEventPriority:
+      schedulerPriorityLevel = IdleSchedulerPriority;
+      break;
+    default:
+      schedulerPriorityLevel = NormalSchedulerPriority;
+      break;
+  }
+
+  let newCallbackNode = scheduleCallback(
+    schedulerPriorityLevel,
+    performConcurrentWorkOnRoot.bind(null, root)
+  );
+
+  root.callbackPriority = newCallbackPriority;
+  root.callbackNode = newCallbackNode;
+}
+
+function performConcurrentWorkOnRoot(root) {
+  currentEventTime = NoTimestamp;
+
+  const originalCallbackNode = root.callbackNode;
+
+  // Determine the next lanes to work on, using the fields stored
+  // on the root.
+  let lanes = getNextLanes(
+    root,
+    root === workInProgressRoot ? workInProgressRootRenderLanes : NoLanes
+  );
+
+  if (lanes === NoLanes) {
+    // Defensive coding. This is never expected to happen.
+    return null;
+  }
+
+  // We disable time-slicing in some cases: if the work has been CPU-bound
+  // for too long ("expired" work, to prevent starvation), or we're in
+  // sync-updates-by-default mode.
+
+  const shouldTimeSlice = false;
+  renderRootSync(root, lanes);
+
+  ensureRootIsScheduled(root, performance.now());
+
+  if (root.callbackNode === originalCallbackNode) {
+    // The task node scheduled for this root is the same one that's
+    // currently executed. Need to return a continuation.
+    return performConcurrentWorkOnRoot.bind(null, root);
+  }
+  return null;
+}
+
+function renderRootSync(root: FiberRoot, lanes: Lanes) {
+  const prevExecutionContext = executionContext;
+
+  executionContext |= RenderContext;
+
+  // const prevDispatcher = pushDispatcher();
+
+  prepareFreshStack(root, lanes);
+
+  do {
+    workLoopSync();
+    break;
+  } while (true);
+  executionContext = prevExecutionContext;
+
+  // Set this to null to indicate there's no in-progress render.
+  workInProgressRoot = null;
+  workInProgressRootRenderLanes = NoLanes;
+
+  return workInProgressRootExitStatus;
 }
 
 function scheduleCallback(priorityLevel, callback: Function) {
   return Scheduler_scheduleCallback(priorityLevel, callback);
 }
 
-//
-function performUnitOfWork() {
-  const {tag} = workInProgress;
+function workLoopSync() {
+  // Already timed out, so perform work without checking if we need to yield.
+  // while (workInProgress != null) {
+  performUnitOfWork(workInProgress);
+  // }
+}
 
-  // todo 1. 更新当前组件
-  switch (tag) {
-    case HostComponent:
-      updateHostComponent(workInProgress);
-      break;
+function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
+  root.finishedWork = null;
+  root.finishedLanes = NoLanes;
 
-    case FunctionComponent:
-      updateFunctionComponent(workInProgress);
-      break;
+  workInProgressRoot = root;
+  const rootWorkInProgress = createWorkInProgress(root.current, null);
+  workInProgress = rootWorkInProgress;
+  workInProgressRootRenderLanes = renderLanes = lanes;
+  workInProgressRootExitStatus = RootInProgress;
 
-    case ClassComponent:
-      updateClassComponent(workInProgress);
-      break;
-    case Fragment:
-      updateFragmentComponent(workInProgress);
-      break;
-    case HostText:
-      updateHostTextComponent(workInProgress);
-      break;
-    default:
-      break;
+  return rootWorkInProgress;
+}
+
+function performUnitOfWork(unitOfWork: Fiber): void {
+  const current = unitOfWork.alternate;
+
+  let next = beginWork(current, unitOfWork, renderLanes);
+
+  unitOfWork.memoizedProps = unitOfWork.pendingProps;
+
+  if (next == null) {
+    // If this doesn't spawn new work, complete the current work.
+    completeUnitOfWork(unitOfWork);
+  } else {
+    workInProgress = next;
   }
 
-  // todo 2. 下一个更新谁 深度优先遍历 （国王的故事）
-  if (workInProgress.child) {
-    workInProgress = workInProgress.child;
-    return;
-  }
+  // ReactCurrentOwner.current = null;
+}
 
-  let next = workInProgress;
-
-  while (next) {
-    if (next.sibling) {
-      workInProgress = next.sibling;
-      return;
-    }
-    next = next.return;
-  }
+function completeUnitOfWork(unitOfWork: Fiber): void {
+  let completedWork = unitOfWork;
 
   workInProgress = null;
-}
-
-function workLoop() {
-  while (workInProgress) {
-    performUnitOfWork();
-  }
-
-  if (!workInProgress && workInProgressRoot) {
-    commitRoot();
-  }
-}
-
-// requestIdleCallback(workLoop);
-
-// 提交
-function commitRoot() {
-  commitWorker(workInProgressRoot);
-  workInProgressRoot = null;
-}
-
-function commitWorker(workInProgress) {
-  if (!workInProgress) {
-    return;
-  }
-
-  // 1. 提交自己
-  // parentNode是父DOM节点
-
-  const parentNode = getParentNode(workInProgress.return); /// workInProgress.return.stateNode;
-  const {flags, stateNode} = workInProgress;
-  if (flags & Placement && stateNode) {
-    // 1
-    // 0 1 2 3 4
-    // 2 1 3 4
-    const before = getHostSibling(workInProgress.sibling);
-    insertOrAppendPlacementNode(stateNode, before, parentNode);
-    // parentNode.appendChild(stateNode);
-  }
-
-  if (flags & Update && stateNode) {
-    // 更新属性
-    updateNode(stateNode, workInProgress.alternate.props, workInProgress.props);
-  }
-
-  if (workInProgress.deletions) {
-    // 删除wip的子节点
-    commitDeletions(workInProgress.deletions, stateNode || parentNode);
-  }
-
-  if (workInProgress.tag === FunctionComponent) {
-    invokeHooks(workInProgress);
-  }
-
-  // 2. 提交子节点
-  commitWorker(workInProgress.child);
-  // 3. 提交兄弟
-  commitWorker(workInProgress.sibling);
-}
-
-function getParentNode(workInProgress) {
-  let tem = workInProgress;
-  while (tem) {
-    if (tem.stateNode) {
-      return tem.stateNode;
-    }
-    tem = tem.return;
-  }
-}
-
-function commitDeletions(deletions, parentNode) {
-  for (let i = 0; i < deletions.length; i++) {
-    parentNode.removeChild(getStateNode(deletions[i]));
-  }
-}
-
-// 不是每个fiber都有dom节点
-function getStateNode(fiber) {
-  let tem = fiber;
-
-  while (!tem.stateNode) {
-    tem = tem.child;
-  }
-
-  return tem.stateNode;
-}
-
-function getHostSibling(sibling) {
-  while (sibling) {
-    if (sibling.stateNode && !(sibling.flags & Placement)) {
-      return sibling.stateNode;
-    }
-    sibling = sibling.sibling;
-  }
-  return null;
-}
-
-function insertOrAppendPlacementNode(stateNode, before, parentNode) {
-  if (before) {
-    parentNode.insertBefore(stateNode, before);
-  } else {
-    parentNode.appendChild(stateNode);
-  }
-}
-
-function invokeHooks(workInProgress) {
-  const {updateQueueOfEffect, updateQueueOfLayout} = workInProgress;
-
-  for (let i = 0; i < updateQueueOfLayout.length; i++) {
-    const effect = updateQueueOfLayout[i];
-    effect.create();
-  }
-
-  for (let i = 0; i < updateQueueOfEffect.length; i++) {
-    const effect = updateQueueOfEffect[i];
-
-    scheduleCallback(() => {
-      effect.create();
-    });
-  }
 }
