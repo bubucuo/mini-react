@@ -1,23 +1,7 @@
-import {Placement, Update} from "./ReactFiberFlags";
-import {
-  updateClassComponent,
-  updateFragmentComponent,
-  updateFunctionComponent,
-  updateHostComponent,
-  updateHostTextComponent,
-} from "./ReactFiberReconciler";
-import {
-  ClassComponent,
-  Fragment,
-  FunctionComponent,
-  HostComponent,
-  HostText,
-} from "./ReactWorkTags";
-import {updateNode} from "./utils";
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {
-  scheduleCallback as Scheduler_scheduleCallback,
-  cancelCallback as Scheduler_cancelCallback,
+  scheduleCallback,
+  cancelCallback,
   shouldYield,
   requestPaint,
   ImmediatePriority as ImmediateSchedulerPriority,
@@ -34,7 +18,7 @@ import {
   getNextLanes,
   getHighestPriorityLane,
 } from "./ReactFiberLane";
-import {NoLanes, SyncLane} from "./ReactFiberLane";
+import {NoLanes} from "./ReactFiberLane";
 import {getCurrentEventPriority} from "../../react-dom/client/ReactDOMHostConfig";
 import {
   DiscreteEventPriority,
@@ -42,6 +26,9 @@ import {
   ContinuousEventPriority,
   DefaultEventPriority,
   IdleEventPriority,
+  getCurrentUpdatePriority,
+  setCurrentUpdatePriority,
+  EventPriority,
 } from "./ReactEventPriorities";
 import {createWorkInProgress} from "./ReactFiber";
 import {beginWork} from "./ReactFiberBeginWork";
@@ -121,7 +108,7 @@ function ensureRootIsScheduled(root: FiberRoot, current: number) {
   if (nextLanes === NoLanes) {
     // Special case: There's nothing to work on.
     if (existingCallbackNode !== null) {
-      Scheduler_cancelCallback(existingCallbackNode);
+      cancelCallback(existingCallbackNode);
     }
     root.callbackNode = null;
 
@@ -167,6 +154,12 @@ function ensureRootIsScheduled(root: FiberRoot, current: number) {
     performConcurrentWorkOnRoot.bind(null, root)
   );
 
+  console.log(
+    "%c [  ]-172",
+    "font-size:13px; background:pink; color:#bf2c9f;",
+    root,
+    newCallbackNode
+  );
   root.callbackPriority = newCallbackPriority;
   root.callbackNode = newCallbackNode;
 }
@@ -195,6 +188,8 @@ function performConcurrentWorkOnRoot(root) {
   const shouldTimeSlice = false;
   renderRootSync(root, lanes);
 
+  commitRoot(root, lanes);
+
   ensureRootIsScheduled(root, performance.now());
 
   if (root.callbackNode === originalCallbackNode) {
@@ -202,6 +197,7 @@ function performConcurrentWorkOnRoot(root) {
     // currently executed. Need to return a continuation.
     return performConcurrentWorkOnRoot.bind(null, root);
   }
+
   return null;
 }
 
@@ -227,15 +223,40 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
   return workInProgressRootExitStatus;
 }
 
-function scheduleCallback(priorityLevel, callback: Function) {
-  return Scheduler_scheduleCallback(priorityLevel, callback);
-}
-
 function workLoopSync() {
+  console.log(
+    "%c [  ]-1835",
+    "font-size:13px; background:pink; color:#bf2c9f;",
+    workInProgress
+  );
+
   // Already timed out, so perform work without checking if we need to yield.
   // while (workInProgress != null) {
-  performUnitOfWork(workInProgress);
+  // performUnitOfWork(workInProgress);
   // }
+}
+
+function commitRoot(root) {
+  const previousUpdateLanePriority = getCurrentUpdatePriority();
+  commitRootImpl(
+    root,
+
+    previousUpdateLanePriority
+  );
+  try {
+    setCurrentUpdatePriority(DiscreteEventPriority);
+  } finally {
+    setCurrentUpdatePriority(previousUpdateLanePriority);
+  }
+
+  return null;
+}
+function commitRootImpl(root: FiberRoot, renderPriorityLevel: EventPriority) {
+  requestPaint();
+
+  // executionContext = prevExecutionContext;
+
+  return null;
 }
 
 function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
@@ -266,6 +287,10 @@ function performUnitOfWork(unitOfWork: Fiber): void {
   }
 
   // ReactCurrentOwner.current = null;
+
+  ensureRootIsScheduled(root, now());
+
+  return null;
 }
 
 function completeUnitOfWork(unitOfWork: Fiber): void {

@@ -150,6 +150,12 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
       pop(taskQueue);
     }
     currentTask = peek(taskQueue);
+
+    console.log(
+      "%c [ currentTask ]-153",
+      "font-size:13px; background:pink; color:#bf2c9f;",
+      taskQueue
+    );
   }
 
   if (currentTask != null) {
@@ -347,11 +353,11 @@ function cancelHostTimeout() {
 }
 
 export {
-  ImmediatePriority as ImmediatePriority,
-  UserBlockingPriority as UserBlockingPriority,
-  NormalPriority as NormalPriority,
-  IdlePriority as IdlePriority,
-  LowPriority as LowPriority,
+  ImmediatePriority,
+  UserBlockingPriority,
+  NormalPriority,
+  IdlePriority,
+  LowPriority,
   scheduleCallback,
   cancelCallback,
   shouldYieldToHost as shouldYield,
