@@ -1,96 +1,161 @@
-import {
-  enableSchedulerDebugging,
-  enableProfiling,
-  enableIsInputPending,
-  enableIsInputPendingContinuous,
-  frameYieldMs,
-  continuousYieldMs,
-  maxYieldMs,
-} from "./SchedulerFeatureFlags";
-import type {Heap} from "./SchedulerMinHeap";
 import {push, pop, peek} from "./SchedulerMinHeap";
-import {
-  ImmediatePriority,
-  UserBlockingPriority,
-  NormalPriority,
-  LowPriority,
-  IdlePriority,
-} from "./SchedulerPriorities";
+import {getCurrentTime, isFn, isObject} from "./shared";
+import {getTimeoutByPriorityLevel, NormalPriority} from "./SchedulerPriorities";
 
-const getCurrentTime = () => performance.now();
+type Callback = any; // (args: any) => void | any;
 
-// Max 31 bit integer. The max integer size in V8 for 32-bit systems.
-// Math.pow(2, 30) - 1
-// 0b111111111111111111111111111111
-var maxSigned31BitInt = 1073741823;
+export interface Task {
+  id: number;
+  callback: Callback;
+  priorityLevel: number;
+  startTime: number;
+  expirationTime: number;
+  sortIndex: number;
+}
 
-// Times out immediately
-var IMMEDIATE_PRIORITY_TIMEOUT = -1;
-// Eventually times out
-var USER_BLOCKING_PRIORITY_TIMEOUT = 250;
-var NORMAL_PRIORITY_TIMEOUT = 5000;
-var LOW_PRIORITY_TIMEOUT = 10000;
-// Never times out
-var IDLE_PRIORITY_TIMEOUT = maxSigned31BitInt;
+type HostCallback = (hasTimeRemaining: boolean, currentTime: number) => boolean;
 
-// 任务存储在最小堆中
-var taskQueue: Heap = [];
-var timerQueue: Heap = [];
+// 任务存储，最小堆
+const taskQueue: Array<Task> = [];
+const timerQueue: Array<Task> = [];
 
-// 任务的id自增函数，可以记录插入任务的顺序
-var taskIdCounter = 1;
+let taskIdCounter: number = 1;
 
-var currentTask = null;
-var currentPriorityLevel = NormalPriority;
+let currentTask: Task | null = null;
+let currentPriorityLevel = NormalPriority;
 
-// 任务执行的时候为true，防止任务重复进入
-var isPerformingWork = false;
+// 在计时
+let isHostTimeoutScheduled: boolean = false;
 
-var isHostCallbackScheduled = false;
-var isHostTimeoutScheduled = false;
+// 在调度任务
+let isHostCallbackScheduled = false;
 
-const isInputPending = navigator.scheduling.isInputPending.bind(
-  navigator.scheduling
-);
+let isMessageLoopRunning = false;
+let scheduledHostCallback: HostCallback | null = null;
+let taskTimeoutID: number = -1;
 
-function advanceTimers(currentTime: Date) {
-  // 检查timerQueue中不在延期的任务，病把他们加入taskQueue中
-  let timer = peek(timerQueue);
+let startTime = -1;
 
+let needsPaint = false;
+let frameInterval = 5; //frameYieldMs;
+
+function shouldYieldToHost() {
+  const timeElapsed = getCurrentTime() - startTime;
+  if (timeElapsed < frameInterval) {
+    // The main thread has only been blocked for a really short amount of time;
+    // smaller than a single frame. Don't yield yet.
+    return false;
+  }
+
+  return true;
+}
+
+let schedulePerformWorkUntilDeadline: Function;
+
+// This is set while performing work, to prevent re-entrance.
+let isPerformingWork = false;
+
+const performWorkUntilDeadline = () => {
+  if (scheduledHostCallback !== null) {
+    const currentTime = getCurrentTime();
+    startTime = currentTime;
+    const hasTimeRemaining = true;
+
+    // If a scheduler task throws, exit the current browser task so the
+    // error can be observed.
+    //
+    // Intentionally not using a try-catch, since that makes some debugging
+    // techniques harder. Instead, if `scheduledHostCallback` errors, then
+    // `hasMoreWork` will remain true, and we'll continue the work loop.
+    let hasMoreWork = true;
+    try {
+      hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime);
+    } finally {
+      if (hasMoreWork) {
+        // If there's more work, schedule the next message event at the end
+        // of the preceding one.
+        schedulePerformWorkUntilDeadline();
+      } else {
+        isMessageLoopRunning = false;
+        scheduledHostCallback = null;
+      }
+    }
+  } else {
+    isMessageLoopRunning = false;
+  }
+
+  // Yielding to the browser will give it a chance to paint, so we can
+  // reset this.
+  needsPaint = false;
+};
+
+const channel = new MessageChannel();
+const port = channel.port2;
+channel.port1.onmessage = performWorkUntilDeadline;
+
+schedulePerformWorkUntilDeadline = () => {
+  port.postMessage(null);
+};
+
+// 取消定时
+function cancelHostTimeout() {
+  clearTimeout(taskTimeoutID);
+  taskTimeoutID = -1;
+}
+
+function requestHostTimeout(callback: Callback, ms: number) {
+  taskTimeoutID = setTimeout(() => {
+    callback(getCurrentTime());
+  }, ms);
+}
+
+// 检查 timerQueue 中的任务，是否有任务已经到期了呢，如果是，就移动到 taskQueue 中
+function advanceTimers(currentTime: number) {
+  let timer: Task = peek(timerQueue) as Task;
   while (timer !== null) {
     if (timer.callback === null) {
-      //Timer被取消
+      // 没有callback了，证明任务已被取消，那么从 timerQueue 删除这个任务即可
       pop(timerQueue);
     } else if (timer.startTime <= currentTime) {
-      // 被触发，加入taskQueue
+      // 任务已经到期，把它移动到 taskQueue 吧
       pop(timerQueue);
-
+      // taskQueue 中是用 expirationTime 作为sortIndex排序的，更新一下呀
       timer.sortIndex = timer.expirationTime;
-
       push(taskQueue, timer);
     } else {
+      // 因为 timerQueue 是最小堆结构，如果这个timer没有过时，那么后面的也没有过时
       return;
     }
-
-    timer = peek(timerQueue);
+    timer = peek(timerQueue) as Task;
   }
 }
 
-function handleTimeout(currentTime: Date) {
+//
+function handleTimeout(currentTime: number) {
   isHostTimeoutScheduled = false;
   advanceTimers(currentTime);
 
+  // 单线程，每次只能调度一个任务，因此如果现在没有任务在被调度，那么可以开始了
   if (!isHostCallbackScheduled) {
-    if (peek(taskQueue) != null) {
+    // 有任务
+    if (peek(taskQueue) !== null) {
       isHostCallbackScheduled = true;
       requestHostCallback(flushWork);
     } else {
-      const firstTimer = peek(timerQueue);
-
-      if (firstTimer != null) {
+      // 没有任务可以调度，那就去处理 timerQueue 中的优先级最高的任务
+      const firstTimer = peek(timerQueue) as Task;
+      if (firstTimer !== null) {
         requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
       }
     }
+  }
+}
+
+function requestHostCallback(callback: HostCallback) {
+  scheduledHostCallback = callback;
+  if (!isMessageLoopRunning) {
+    isMessageLoopRunning = true;
+    schedulePerformWorkUntilDeadline();
   }
 }
 
@@ -98,12 +163,13 @@ function flushWork(hasTimeRemaining: boolean, initialTime: number) {
   isHostCallbackScheduled = false;
 
   if (isHostTimeoutScheduled) {
+    // We scheduled a timeout but it's no longer needed. Cancel it.
     isHostTimeoutScheduled = false;
-    // 之前计划了一个时间延迟，但是现在不需要了，取消即可
     cancelHostTimeout();
   }
 
   isPerformingWork = true;
+
   const previousPriorityLevel = currentPriorityLevel;
 
   try {
@@ -118,52 +184,45 @@ function flushWork(hasTimeRemaining: boolean, initialTime: number) {
 function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   let currentTime = initialTime;
   advanceTimers(currentTime);
-
-  currentTask = peek(taskQueue);
+  currentTask = peek(taskQueue) as Task;
 
   while (currentTask !== null) {
     if (
       currentTask.expirationTime > currentTime &&
-      (!hasTimeRemaining || shouldYieldToHost())
+      !(hasTimeRemaining || shouldYieldToHost())
     ) {
-      // 任务还没执行完成，但是已经没时间了
+      // This currentTask hasn't expired, and we've reached the deadline.
+      //  当前任务还没有过期
       break;
     }
     const callback = currentTask.callback;
-
-    if (typeof callback === "function") {
+    if (isFn(callback)) {
       currentTask.callback = null;
       currentPriorityLevel = currentTask.priorityLevel;
       const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+
       const continuationCallback = callback(didUserCallbackTimeout);
       currentTime = getCurrentTime();
-
-      if (typeof continuationCallback === "function") {
+      if (isFn(continuationCallback)) {
         currentTask.callback = continuationCallback;
       } else {
         if (currentTask === peek(taskQueue)) {
           pop(taskQueue);
         }
-        advanceTimers(currentTime);
       }
+      advanceTimers(currentTime);
     } else {
       pop(taskQueue);
     }
-    currentTask = peek(taskQueue);
 
-    console.log(
-      "%c [ currentTask ]-153",
-      "font-size:13px; background:pink; color:#bf2c9f;",
-      taskQueue
-    );
+    currentTask = peek(taskQueue) as Task;
   }
 
-  if (currentTask != null) {
-    // 还有任务
+  // Return whether there's additional work
+  if (currentTask !== null) {
     return true;
   } else {
-    const firstTimer = peek(timerQueue);
-
+    const firstTimer = peek(timerQueue) as Task;
     if (firstTimer !== null) {
       requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
     }
@@ -171,16 +230,15 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   }
 }
 
-function scheduleCallback(
+export function scheduleCallback(
   priorityLevel: number,
   callback: Function,
-  options?: any
+  options?: {delay: number}
 ) {
-  var currentTime = getCurrentTime();
-  var startTime;
-
-  if (typeof options === "object" && options !== null) {
-    var delay = options.delay;
+  let currentTime = getCurrentTime();
+  let startTime: number;
+  if (isObject(options) && options !== null) {
+    let delay = options?.delay;
     if (typeof delay === "number" && delay > 0) {
       startTime = currentTime + delay;
     } else {
@@ -190,28 +248,11 @@ function scheduleCallback(
     startTime = currentTime;
   }
 
-  var timeout;
-  switch (priorityLevel) {
-    case ImmediatePriority:
-      timeout = IMMEDIATE_PRIORITY_TIMEOUT;
-      break;
-    case UserBlockingPriority:
-      timeout = USER_BLOCKING_PRIORITY_TIMEOUT;
-      break;
-    case IdlePriority:
-      timeout = IDLE_PRIORITY_TIMEOUT;
-      break;
-    case LowPriority:
-      timeout = LOW_PRIORITY_TIMEOUT;
-      break;
-    case NormalPriority:
-    default:
-      timeout = NORMAL_PRIORITY_TIMEOUT;
-      break;
-  }
+  let timeout = getTimeoutByPriorityLevel(priorityLevel);
 
-  var expirationTime = startTime + timeout;
-  var newTask = {
+  let expirationTime = startTime + timeout;
+
+  const newTask: Task = {
     id: taskIdCounter++,
     callback,
     priorityLevel,
@@ -221,24 +262,27 @@ function scheduleCallback(
   };
 
   if (startTime > currentTime) {
+    // This is a delayed task.
     newTask.sortIndex = startTime;
     push(timerQueue, newTask);
     if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
+      // 如果现在taskQueue为空，而newTask又是timerQueue中优先级最高的任务
+      // 那么（否则就在 timerQueue 中待着吧）
       if (isHostTimeoutScheduled) {
-        // 所有任务都延时了
+        // 如果现在有别的任务在做计时，那么取消它。先安排优先级高的
+        // Cancel an existing timeout.
         cancelHostTimeout();
       } else {
-        isHostCallbackScheduled = true;
+        isHostTimeoutScheduled = true;
       }
-
+      // Schedule a timeout.
+      // 现在安排当前的任务用setTimeout做计时，即startTime - currentTime 之后执行
       requestHostTimeout(handleTimeout, startTime - currentTime);
     }
   } else {
     newTask.sortIndex = expirationTime;
-    push(taskQueue, newTask);
 
-    // 调度一个callback。
-    // 如果此时正在执行任务，则等待下次让步
+    push(taskQueue, newTask);
     if (!isHostCallbackScheduled && !isPerformingWork) {
       isHostCallbackScheduled = true;
       requestHostCallback(flushWork);
@@ -247,121 +291,3 @@ function scheduleCallback(
 
   return newTask;
 }
-
-function cancelCallback(task) {
-  task.callback = null;
-}
-
-let isMessageLoopRunning = false;
-let scheduledHostCallback;
-let taskTimeoutID = -1;
-
-// 调度器会周期地让步，以防主线程有其他任务要执行，比如用户事件。
-// 默认情况下，每帧会让步多次。
-// 由于大多数的任务并不需要帧对齐，因此这里并不会尝试与帧同步。
-// 对于需要的帧对齐的任务，会用requestAnimationFrame。
-let frameInterval = frameYieldMs;
-const continuousInputInterval = continuousYieldMs;
-const maxInterval = maxYieldMs;
-let startTime = -1;
-
-let needsPaint = false;
-
-// 判断是否超时，是否需要被打断
-function shouldYieldToHost() {
-  const timeElapsed = getCurrentTime() - startTime;
-  if (timeElapsed < frameInterval) {
-    // The main thread has only been blocked for a really short amount of time;
-    // smaller than a single frame. Don't yield yet.
-    return false;
-  }
-
-  return true;
-}
-
-function requestPaint() {
-  if (
-    enableIsInputPending &&
-    navigator !== undefined &&
-    navigator.scheduling !== undefined &&
-    navigator.scheduling.isInputPending !== undefined
-  ) {
-    needsPaint = true;
-  }
-}
-
-function requestYield() {
-  // 让步
-  startTime = -9999;
-}
-
-const performWorkUntilDeadline = () => {
-  if (scheduledHostCallback !== null) {
-    const currentTime = getCurrentTime();
-    // 追踪开始时间，这样可以计算主线程被堵住多久了
-    startTime = currentTime;
-    const hasTimeRemaining = true;
-
-    let hasMoreWork = true;
-
-    try {
-      hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime);
-    } finally {
-      if (hasMoreWork) {
-        // 如果还有任务，在上一个消息事件结束的之后，再调度下一个消息事件
-        schedulePerformWorkUntilDeadline();
-      } else {
-        isMessageLoopRunning = false;
-        scheduledHostCallback = null;
-      }
-    }
-  } else {
-    isMessageLoopRunning = false;
-  }
-  // 让步给浏览器
-  needsPaint = false;
-};
-
-let schedulePerformWorkUntilDeadline;
-
-const channel = new MessageChannel();
-
-const port = channel.port2;
-
-channel.port1.onmessage = performWorkUntilDeadline;
-schedulePerformWorkUntilDeadline = () => {
-  port.postMessage(null);
-};
-
-function requestHostCallback(callback: Function) {
-  scheduledHostCallback = callback;
-  if (!isMessageLoopRunning) {
-    isMessageLoopRunning = true;
-    schedulePerformWorkUntilDeadline();
-  }
-}
-
-function requestHostTimeout(callback: Function, ms: number) {
-  taskTimeoutID = setTimeout(() => {
-    callback(getCurrentTime());
-  }, ms);
-}
-
-function cancelHostTimeout() {
-  clearTimeout(taskTimeoutID);
-  taskTimeoutID = -1;
-}
-
-export {
-  ImmediatePriority,
-  UserBlockingPriority,
-  NormalPriority,
-  IdlePriority,
-  LowPriority,
-  scheduleCallback,
-  cancelCallback,
-  shouldYieldToHost as shouldYield,
-  getCurrentTime as unstable_now,
-  requestPaint, // as unstable_requestPaint,
-  // requestYield as unstable_requestYield,
-};
