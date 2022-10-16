@@ -23,7 +23,7 @@ export const LOW_PRIORITY_TIMEOUT = 10000;
 // Never times out
 export const IDLE_PRIORITY_TIMEOUT = maxSigned31BitInt;
 
-export function getTimeoutByPriorityLevel(priorityLevel) {
+export function getTimeoutByPriorityLevel(priorityLevel: PriorityLevel) {
   let timeout: number;
 
   switch (priorityLevel) {

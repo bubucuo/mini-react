@@ -1,6 +1,6 @@
-type Heap = Array<Node>;
+export type Heap = Array<Node>;
 
-type Node = {
+export type Node = {
   id: number;
   sortIndex: number;
 };
