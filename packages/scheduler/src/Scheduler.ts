@@ -45,6 +45,11 @@ let taskTimeoutID: number = -1;
 let startTime = -1;
 
 let needsPaint = false;
+
+// Scheduler periodically yields in case there is other work on the main
+// thread, like user events. By default, it yields multiple times per frame.
+// It does not attempt to align with frame boundaries, since most tasks don't
+// need to be frame aligned; for those that do, use requestAnimationFrame.
 let frameInterval = 5; //frameYieldMs;
 
 function cancelHostTimeout() {
@@ -113,6 +118,7 @@ const performWorkUntilDeadline = () => {
       hasMoreWork = scheduledHostCallback(hasTimeRemaining, currentTime);
     } finally {
       if (hasMoreWork) {
+        schedulePerformWorkUntilDeadline();
       } else {
         isMessageLoopRunning = false;
         scheduledHostCallback = null;
@@ -161,7 +167,10 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   currentTask = peek(taskQueue) as Task;
 
   while (currentTask !== null) {
-    if (currentTask.expirationTime > currentTime && !hasTimeRemaining) {
+    if (
+      currentTask.expirationTime > currentTime &&
+      (!hasTimeRemaining || shouldYieldToHost())
+    ) {
       // 当前任务还没有过期，并且没有剩余时间了
       break;
     }
@@ -184,6 +193,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
         }
       }
       advanceTimers(currentTime);
+      return true;
     } else {
       // currentTask不是有效任务
       pop(taskQueue);
@@ -197,11 +207,22 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
     return true;
   } else {
     const firstTimer = peek(timerQueue) as Task;
-    if (firstTimer == null) {
+    if (firstTimer !== null) {
       requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
     }
     return false;
   }
+}
+
+function shouldYieldToHost() {
+  const timeElapsed = getCurrentTime() - startTime;
+  if (timeElapsed < frameInterval) {
+    // The main thread has only been blocked for a really short amount of time;
+    // smaller than a single frame. Don't yield yet.
+    return false;
+  }
+
+  return true;
 }
 
 export function scheduleCallback(
