@@ -112,6 +112,10 @@ const performWorkUntilDeadline = () => {
   if (scheduledHostCallback !== null) {
     const currentTime = getCurrentTime();
 
+    // Keep track of the start time so we can measure how long the main thread
+    // has been blocked.
+    startTime = currentTime;
+
     const hasTimeRemaining = true;
     let hasMoreWork = true;
     try {
@@ -159,8 +163,6 @@ function flushWork(hasTimeRemaining: boolean, initialTime: number) {
   }
 }
 
-let n = 0;
-
 // 在当前时间切片内循环执行任务
 function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   let currentTime = initialTime;
@@ -168,24 +170,13 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   advanceTimers(currentTime);
   currentTask = peek(taskQueue) as Task;
 
-  while (currentTask !== null && n < 10) {
-    n++;
-    console.log(
-      "%c [  ]-174",
-      "font-size:13px; background:pink; color:#bf2c9f;",
-      currentTask,
-      n
-    );
+  while (currentTask !== null) {
+    const should = shouldYieldToHost();
     if (
       currentTask.expirationTime > currentTime &&
-      (!hasTimeRemaining || shouldYieldToHost())
+      (!hasTimeRemaining || should)
     ) {
       // 当前任务还没有过期，并且没有剩余时间了
-      console.log(
-        "%c [  ]-186",
-        "font-size:13px; background:pink; color:#bf2c9f;",
-        n
-      );
       break;
     }
 
@@ -231,6 +222,7 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
 
 function shouldYieldToHost() {
   const timeElapsed = getCurrentTime() - startTime;
+
   if (timeElapsed < frameInterval) {
     // The main thread has only been blocked for a really short amount of time;
     // smaller than a single frame. Don't yield yet.
