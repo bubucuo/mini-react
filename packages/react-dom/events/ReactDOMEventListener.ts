@@ -1,4 +1,12 @@
 import {
+  getCurrentSchedulerPriorityLevel,
+  ImmediateSchedulerPriority,
+  UserBlockingSchedulerPriority,
+  NormalSchedulerPriority,
+  LowSchedulerPriority,
+  IdleSchedulerPriority,
+} from "scheduler";
+import {
   DiscreteEventPriority,
   ContinuousEventPriority,
   DefaultEventPriority,

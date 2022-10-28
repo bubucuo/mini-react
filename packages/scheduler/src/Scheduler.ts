@@ -1,5 +1,5 @@
 import {push, pop, peek} from "./SchedulerMinHeap";
-import {getCurrentTime, isFn, isObject} from "./shared";
+import {getCurrentTime, isFn, isObject} from "shared/utils";
 import {
   getTimeoutByPriorityLevel,
   NormalPriority,
@@ -26,7 +26,7 @@ const timerQueue: Array<Task> = [];
 let taskIdCounter: number = 1;
 
 let currentTask: Task | null = null;
-let currentPriorityLevel = NormalPriority;
+let currentPriorityLevel: PriorityLevel = NormalPriority;
 
 // 在计时
 let isHostTimeoutScheduled: boolean = false;
@@ -159,6 +159,8 @@ function flushWork(hasTimeRemaining: boolean, initialTime: number) {
   }
 }
 
+let n = 0;
+
 // 在当前时间切片内循环执行任务
 function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   let currentTime = initialTime;
@@ -166,12 +168,24 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
   advanceTimers(currentTime);
   currentTask = peek(taskQueue) as Task;
 
-  while (currentTask !== null) {
+  while (currentTask !== null && n < 10) {
+    n++;
+    console.log(
+      "%c [  ]-174",
+      "font-size:13px; background:pink; color:#bf2c9f;",
+      currentTask,
+      n
+    );
     if (
       currentTask.expirationTime > currentTime &&
       (!hasTimeRemaining || shouldYieldToHost())
     ) {
       // 当前任务还没有过期，并且没有剩余时间了
+      console.log(
+        "%c [  ]-186",
+        "font-size:13px; background:pink; color:#bf2c9f;",
+        n
+      );
       break;
     }
 
@@ -183,22 +197,23 @@ function workLoop(hasTimeRemaining: boolean, initialTime: number) {
       const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
 
       const continuationCallback = callback(didUserCallbackTimeout);
+
       currentTime = getCurrentTime();
       if (isFn(continuationCallback)) {
         // 任务没有执行完
         currentTask.callback = continuationCallback;
+        advanceTimers(currentTime);
+        return true;
       } else {
         if (currentTask === peek(taskQueue)) {
           pop(taskQueue);
         }
+        advanceTimers(currentTime);
       }
-      advanceTimers(currentTime);
-      return true;
     } else {
       // currentTask不是有效任务
       pop(taskQueue);
     }
-
     currentTask = peek(taskQueue) as Task;
   }
 
@@ -279,6 +294,34 @@ export function scheduleCallback(
       requestHostCallback(flushWork);
     }
   }
+}
+
+// 取消任务
+export function cancelCallback(task: Task) {
+  // Null out the callback to indicate the task has been canceled. (Can't
+  // remove from the queue because you can't remove arbitrary nodes from an
+  // array based heap, only the first one.)
+  // 取消任务，不能直接删除，因为最小堆中只能删除堆顶元素
+  task.callback = null;
+}
+
+// 获取当前任务优先级
+export function getCurrentPriorityLevel(): PriorityLevel {
+  return currentPriorityLevel;
+}
+
+export function requestPaint() {
+  // if (
+  //   enableIsInputPending &&
+  //   navigator !== undefined &&
+  //   // $FlowFixMe[prop-missing]
+  //   navigator.scheduling !== undefined &&
+  //   // $FlowFixMe[incompatible-type]
+  //   navigator.scheduling.isInputPending !== undefined
+  // ) {
+  //   needsPaint = true;
+  // }
+  // Since we yield every frame regardless, `requestPaint` has no effect.
 }
 
 // heap中谁的任务优先级最高先去执行谁，这里说的“任务优先级”不是priorityLevel

@@ -17,3 +17,7 @@ export function isObject(sth: any) {
 export function isFn(sth: any) {
   return typeof sth === "function";
 }
+
+export function isStr(sth: any) {
+  return typeof sth === "string";
+}

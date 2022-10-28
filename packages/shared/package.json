@@ -5,6 +5,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "dependencies": {
+    "react-reconciler": "workspace:*"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC"

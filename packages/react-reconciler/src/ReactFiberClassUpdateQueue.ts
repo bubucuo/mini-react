@@ -53,12 +53,13 @@ export function enqueueUpdate<State>(
 ): FiberRoot | null {
   const updateQueue = fiber.updateQueue;
   if (updateQueue == null) {
+    // Only occurs if the fiber has been unmounted.
     return null;
   }
 
   const shareQueue: SharedQueue<State> = updateQueue.shared;
 
-  return enqueueConcurrentClassUpdate(fiber, shareQueue, update, lane);
+  return enqueueConcurrentClassUpdate(fiber, shareQueue, update as any, lane);
 }
 
 export function initializeUpdateQueue<State>(fiber: Fiber): void {

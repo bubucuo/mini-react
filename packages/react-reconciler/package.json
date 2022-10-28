@@ -10,7 +10,6 @@
     "shared": "workspace:*",
     "scheduler": "workspace:*",
     "react-dom": "workspace:*"
-
   },
   "keywords": [],
   "author": "",
