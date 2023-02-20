@@ -10,3 +10,4 @@ export {
 export {getCurrentPriorityLevel as getCurrentSchedulerPriorityLevel} from "./src/Scheduler";
 
 export * as Scheduler from "./src/Scheduler";
+export {scheduleCallback} from "./src/Scheduler";
