@@ -53,12 +53,12 @@ let needsPaint = false;
 let frameInterval = 5; //frameYieldMs;
 
 function cancelHostTimeout() {
-  clearTimeout(taskIdCounter);
-  taskIdCounter = -1;
+  clearTimeout(taskTimeoutID);
+  taskTimeoutID = -1;
 }
 
 function requestHostTimeout(callback: Callback, ms: number) {
-  taskIdCounter = setTimeout(() => {
+  taskTimeoutID = setTimeout(() => {
     callback(getCurrentTime());
   }, ms);
 }
