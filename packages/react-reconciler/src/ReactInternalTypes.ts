@@ -1,6 +1,6 @@
 import type {WorkTag} from "./ReactWorkTags";
 import type {Flags} from "./ReactFiberFlags";
-import type {LaneMap, Lanes, Lane} from "./ReactFiberLane";
+// import type {LaneMap, Lanes, Lane} from "../src-tem/ReactFiberLane";
 
 export type Fiber = {
   // Tag identifying the type of fiber.
@@ -54,8 +54,8 @@ export type Fiber = {
   // Singly linked list fast path to the next fiber with side-effects.
   nextEffect: Fiber | null;
 
-  lanes: Lanes;
-  childLanes: Lanes;
+  // lanes: Lanes;
+  // childLanes: Lanes;
 
   // This is a pooled version of a Fiber. Every fiber that gets updated will
   // eventually have a pair. There are cases when we can clean up pairs to save
@@ -82,17 +82,17 @@ export type FiberRoot = {
   // Node returned by Scheduler.scheduleCallback. Represents the next rendering
   // task that the root will work on.
   callbackNode: any;
-  callbackPriority: Lane;
-  eventTimes: LaneMap<number>;
-  expirationTimes: LaneMap<number>;
+  // callbackPriority: Lane;
+  // eventTimes: LaneMap<number>;
+  // expirationTimes: LaneMap<number>;
 
-  pendingLanes: Lanes;
-  suspendedLanes: Lanes;
-  pingedLanes: Lanes;
-  expiredLanes: Lanes;
+  // pendingLanes: Lanes;
+  // suspendedLanes: Lanes;
+  // pingedLanes: Lanes;
+  // expiredLanes: Lanes;
 
-  finishedLanes: Lanes;
+  // finishedLanes: Lanes;
 
-  entangledLanes: Lanes;
-  entanglements: LaneMap<Lanes>;
+  // entangledLanes: Lanes;
+  // entanglements: LaneMap<Lanes>;
 };

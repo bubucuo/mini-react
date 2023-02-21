@@ -1,114 +1,33 @@
-import type {Fiber, FiberRoot} from "./ReactInternalTypes";
-import type {Lanes} from "./ReactFiberLane";
-import {NoLanes} from "./ReactFiberLane";
-import {
-  ClassComponent,
-  Fragment,
-  FunctionComponent,
-  HostComponent,
-  HostRoot,
-  HostText,
-} from "./ReactWorkTags";
-import {RootState} from "./ReactFiberRoot";
-// import {shouldSetTextContent} from "react-dom/client/ReactDOMHostConfig";
-import {shouldSetTextContent} from "react-dom";
+import {Fiber} from "./ReactInternalTypes";
+import {HostComponent, HostRoot, HostText} from "../src/ReactWorkTags";
+import {ContentReset, Flags, Placement} from "./ReactFiberFlags";
+import {createFiberFromElement} from "./ReactFiber";
+import {isStr} from "shared/utils";
+import {FunctionComponent} from "./ReactWorkTags";
 
-import {ContentReset} from "./ReactFiberFlags";
-import {mountChildFibers, reconcileChildFibers} from "./ReactChildFiber";
-// import {reconcileChildren} from "./ReactChildFiber";
-
-// import {
-//   updateClassComponent,
-//   updateFragment,
-//   updateFunctionComponent,
-//   updateHostComponent,
-//   updateHostTextComponent,
-// } from "./ReactFiberReconciler";
-
-let didReceiveUpdate: boolean = false;
-
-export function beginWork(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-): Fiber | null {
-  workInProgress.lanes = NoLanes;
-
-  if (current !== null) {
-    // 更新
-    const oldProps = current.memoizedProps;
-    const newProps = workInProgress.pendingProps;
-    if (oldProps !== newProps) {
-      didReceiveUpdate = true;
-    } else {
-      // todo context value change
-      didReceiveUpdate = false;
-      // ?
-      return attemptEarlyBailoutIfNoScheduledUpdate(
-        current,
-        workInProgress,
-        renderLanes
-      );
-    }
-  } else {
-    // 初次渲染
-    didReceiveUpdate = false;
-  }
-
-  // Before entering the begin phase, clear pending update priority.
-  // TODO: This assumes that we're about to evaluate the component and process
-  // the update queue. However, there's an exception: SimpleMemoComponent
-  // sometimes bails out later in the begin phase. This indicates that we should
-  // move this assignment out of the common path and into each branch.
-  workInProgress.lanes = NoLanes;
-
+export function beginWork(current: Fiber | null, workInProgress: Fiber) {
   switch (workInProgress.tag) {
     case HostRoot:
-      return updateHostRoot(current, workInProgress, renderLanes);
+      return updateHostRoot(current, workInProgress);
     case HostComponent:
-      return updateHostComponent(current, workInProgress, renderLanes);
-
+      return updateHostComponent(current, workInProgress);
     case FunctionComponent:
-    // return updateFunctionComponent(current, workInProgress, renderLanes);
-
-    case ClassComponent:
-    // return updateClassComponent(current, workInProgress, renderLanes);
-
-    case Fragment:
-    // return updateFragment(current, workInProgress, renderLanes);
-
+      return updateFunctionComponent(current, workInProgress);
     case HostText:
       return updateHostText(current, workInProgress);
   }
 }
 
-function updateHostRoot(current, workInProgress, renderLanes) {
-  // pushHostRootContext(workInProgress);
-
-  const nextProps = workInProgress.pendingProps;
-  const prevState = workInProgress.memoizedState;
-  const prevChildren = prevState.element;
-
-  // cloneUpdateQueue(current, workInProgress);
-  // processUpdateQueue(workInProgress, nextProps, null, renderLanes);
-
-  const nextState: RootState = workInProgress.memoizedState;
-  const root: FiberRoot = workInProgress.stateNode;
-  // pushRootTransition(workInProgress, root, renderLanes);
-
-  const nextChildren = nextState.element;
-
+function updateHostRoot(current: Fiber | null, workInProgress: Fiber) {
   return workInProgress.child;
 }
 
-function updateHostComponent(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  renderLanes: Lanes
-) {
-  // pushHostContext(workInProgress);
-
+function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
   const type = workInProgress.type;
+  if (!workInProgress.stateNode) {
+    workInProgress.stateNode = document.createElement(type);
+    updateNode(workInProgress.stateNode, workInProgress.pendingProps);
+  }
   const nextProps = workInProgress.pendingProps;
   const prevProps = current !== null ? current.memoizedProps : null;
 
@@ -127,55 +46,83 @@ function updateHostComponent(
     workInProgress.flags |= ContentReset;
   }
 
-  reconcileChildren(current, workInProgress, nextChildren, renderLanes);
+  workInProgress.child = reconcileChildren(
+    current,
+    workInProgress,
+    nextChildren
+  );
   return workInProgress.child;
 }
-
 function updateHostText(current, workInProgress) {
   // Nothing to do here. This is terminal. We'll do the completion step
   // immediately after.
   return null;
 }
 
-export function reconcileChildren(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  nextChildren: any,
-  renderLanes: Lanes
-) {
-  if (current === null) {
-    // If this is a fresh new component that hasn't been rendered yet, we
-    // won't update its child set by applying minimal side-effects. Instead,
-    // we will add them all to the child before it gets rendered. That means
-    // we can optimize this reconciliation pass by not tracking side-effects.
-    workInProgress.child = mountChildFibers(
-      workInProgress,
-      null,
-      nextChildren,
-      renderLanes
-    );
-  } else {
-    // If the current child is the same as the work in progress, it means that
-    // we haven't yet started any work on these children. Therefore, we use
-    // the clone algorithm to create a copy of all the current children.
+function updateFunctionComponent(current, workInProgress) {
+  console.log(
+    "%c [  ]-64",
+    "font-size:13px; background:pink; color:#bf2c9f;",
+    workInProgress
+  );
+  const {type, pendingProps} = workInProgress;
 
-    // If we had any progressed work already, that is invalid at this point so
-    // let's throw it out.
-    workInProgress.child = reconcileChildFibers(
-      workInProgress,
-      current.child,
-      nextChildren,
-      renderLanes
-    );
-  }
+  const children = type(pendingProps);
+
+  workInProgress.child = reconcileChildren(current, workInProgress, children);
+
+  return workInProgress.child;
 }
 
-export function updateFragment() {}
+function shouldSetTextContent(type: string, props: any): boolean {
+  return (
+    type === "textarea" ||
+    type === "noscript" ||
+    typeof props.children === "string" ||
+    typeof props.children === "number" ||
+    (typeof props.dangerouslySetInnerHTML === "object" &&
+      props.dangerouslySetInnerHTML !== null &&
+      props.dangerouslySetInnerHTML.__html != null)
+  );
+}
 
-function attemptEarlyBailoutIfNoScheduledUpdate(
-  current,
-  workInProgress,
-  renderLanes
-): Fiber | null {
-  return workInProgress.child;
+function reconcileChildren(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  nextChildren: any
+) {
+  const newChildren = Array.isArray(nextChildren)
+    ? nextChildren
+    : [nextChildren];
+  let newIdx = 0;
+  let resultingFirstChild;
+  let previousNewFiber = null; //记录上一次的fiber
+  for (newIdx = 0; newIdx < newChildren.length; newIdx++) {
+    const newChild = newChildren[newIdx];
+    if (newChild == null) {
+      continue;
+    }
+    const newFiber = createFiberFromElement(newChild, workInProgress);
+    newFiber.flags = Placement;
+    if (previousNewFiber === null) {
+      resultingFirstChild = newFiber;
+    } else {
+      previousNewFiber.sibling = newFiber;
+    }
+    previousNewFiber = newFiber;
+  }
+
+  return resultingFirstChild;
+}
+
+export function updateNode(node, nextVal) {
+  Object.keys(nextVal).forEach((k) => {
+    if (k === "children") {
+      if (isStr(nextVal[k])) {
+        node.textContent = nextVal[k] + "";
+      }
+    } else {
+      node[k] = nextVal[k];
+    }
+  });
 }

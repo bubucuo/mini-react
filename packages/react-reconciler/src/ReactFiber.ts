@@ -1,7 +1,6 @@
-import {NoFlags, Placement} from "./ReactFiberFlags";
-import {IndeterminateComponent, WorkTag} from "./ReactWorkTags";
-import {Lanes, NoLanes} from "./ReactFiberLane";
-import type {Fiber} from "./ReactInternalTypes";
+import {NoFlags} from "../src/ReactFiberFlags";
+import {IndeterminateComponent, WorkTag} from "../src/ReactWorkTags";
+import type {Fiber} from "../src/ReactInternalTypes";
 import {REACT_FRAGMENT_TYPE} from "shared/ReactSymbols";
 
 import {
@@ -10,22 +9,26 @@ import {
   FunctionComponent,
   HostComponent,
   HostText,
-} from "./ReactWorkTags";
+} from "../src/ReactWorkTags";
 
 import {isFn, isStr} from "shared/utils";
-import {RootTag, ConcurrentRoot} from "./ReactFiberRoot";
-import {HostRoot} from "./ReactWorkTags";
 import {ReactElement, ReactFragment} from "shared/ReactTypes";
 
 export function createFiber(
   tag: WorkTag,
   pendingProps: any,
-  key: null | string
+  key: null | string,
+  returnFiber: Fiber
 ): Fiber {
-  return new FiberNode(tag, pendingProps, key);
+  return new FiberNode(tag, pendingProps, key, returnFiber);
 }
 
-function FiberNode(tag: WorkTag, pendingProps: unknown, key: null | string) {
+function FiberNode(
+  tag: WorkTag,
+  pendingProps: unknown,
+  key: null | string,
+  returnFiber: Fiber
+) {
   // Instance
   this.tag = tag;
   this.key = key;
@@ -34,7 +37,7 @@ function FiberNode(tag: WorkTag, pendingProps: unknown, key: null | string) {
   this.stateNode = null;
 
   // Fiber
-  this.return = null;
+  this.return = returnFiber; //null;
   this.child = null;
   this.sibling = null;
   this.index = 0;
@@ -49,18 +52,24 @@ function FiberNode(tag: WorkTag, pendingProps: unknown, key: null | string) {
   this.subtreeFlags = NoFlags;
   this.deletions = null;
 
-  this.lanes = NoLanes;
-  this.childLanes = NoLanes;
-
   this.alternate = null;
 }
 
 // This is used to create an alternate fiber to do work on.
-export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
+export function createWorkInProgress(
+  current: Fiber,
+  pendingProps: any,
+  returnFiber: Fiber
+): Fiber {
   let workInProgress = current.alternate;
 
   if (workInProgress === null) {
-    workInProgress = createFiber(current.tag, pendingProps, current.key);
+    workInProgress = createFiber(
+      current.tag,
+      pendingProps,
+      current.key,
+      returnFiber
+    );
     workInProgress.elementType = current.elementType;
     workInProgress.type = current.type;
     workInProgress.stateNode = current.stateNode;
@@ -85,8 +94,6 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   // Reset all effects except static ones.
   // Static effects are not specific to a render.
   workInProgress.flags = current.flags;
-  workInProgress.childLanes = current.childLanes;
-  workInProgress.lanes = current.lanes;
 
   workInProgress.child = current.child;
   workInProgress.memoizedProps = current.memoizedProps;
@@ -99,15 +106,11 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   return workInProgress;
 }
 
-export function createHostRootFiber(tag: RootTag): Fiber {
-  return createFiber(HostRoot, null, null);
-}
-
 export function createFiberFromTypeAndProps(
   type: any,
   key: null | string,
   pendingProps: any,
-  lanes: Lanes
+  returnFiber: Fiber
 ): Fiber {
   let fiberTag: WorkTag = IndeterminateComponent;
   // The resolved type is set if we know what the final type will be. I.e. it's not lazy.
@@ -120,42 +123,46 @@ export function createFiberFromTypeAndProps(
   } else if (isStr(type)) {
     fiberTag = HostComponent;
   } else if (type === REACT_FRAGMENT_TYPE) {
-    return createFiberFromFragment(pendingProps.children, lanes, key);
+    return createFiberFromFragment(pendingProps.children, key, returnFiber);
   }
 
-  const fiber = createFiber(fiberTag, pendingProps, key);
+  const fiber = createFiber(fiberTag, pendingProps, key, returnFiber);
   fiber.elementType = type;
   fiber.type = type;
-  fiber.lanes = lanes;
 
   return fiber;
 }
 
 export function createFiberFromElement(
   element: ReactElement,
-  lanes: Lanes
+  returnFiber: Fiber
 ): Fiber {
   const type = element.type;
   const key = element.key;
   const pendingProps = element.props;
-  const fiber = createFiberFromTypeAndProps(type, key, pendingProps, lanes);
-
+  const fiber = createFiberFromTypeAndProps(
+    type,
+    key,
+    pendingProps,
+    returnFiber
+  );
   return fiber;
 }
 
 export function createFiberFromFragment(
   elements: ReactFragment,
-  lanes: Lanes,
-  key: null | string
+  key: null | string,
+  returnFiber: Fiber
 ): Fiber {
-  const fiber = createFiber(Fragment, elements, key);
-  fiber.lanes = lanes;
+  const fiber = createFiber(Fragment, elements, key, returnFiber);
   return fiber;
 }
 
-export function createFiberFromText(content: string, lanes: Lanes): Fiber {
-  const fiber = createFiber(HostText, content, null);
-  fiber.lanes = lanes;
+export function createFiberFromText(
+  content: string,
+  returnFiber: Fiber
+): Fiber {
+  const fiber = createFiber(HostText, content, null, returnFiber);
   return fiber;
 }
 

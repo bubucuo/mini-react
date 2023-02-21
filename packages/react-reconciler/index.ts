@@ -1,5 +1,5 @@
-export * from "./src/ReactFiberReconciler";
-export * from "./src/hooks";
+export * from "./src-tem/ReactFiberReconciler";
+export * from "./src-tem/hooks";
 
 export function add() {
   return 100;

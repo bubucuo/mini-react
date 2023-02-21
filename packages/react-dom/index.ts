@@ -1,2 +1,2 @@
-export * from "./client";
-export * from "./client/ReactDOMHostConfig";
+export * from "./src/client";
+export * from "./src/client/ReactDOMHostConfig";
