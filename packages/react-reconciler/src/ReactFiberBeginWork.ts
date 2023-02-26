@@ -1,49 +1,58 @@
-import {Fiber} from "./ReactInternalTypes";
-import {HostComponent, HostRoot, HostText} from "../src/ReactWorkTags";
-import {ContentReset, Flags, Placement} from "./ReactFiberFlags";
 import {createFiberFromElement} from "./ReactFiber";
-import {isStr} from "shared/utils";
-import {FunctionComponent} from "./ReactWorkTags";
+import {Placement} from "./ReactFiberFlags";
+import {Fiber} from "./ReactInternalTypes";
+import {HostComponent, HostRoot} from "./ReactWorkTags";
+import {isStr} from "../../shared/utils";
 
-export function beginWork(current: Fiber | null, workInProgress: Fiber) {
+export function beginWork(
+  current: Fiber | null,
+  workInProgress: Fiber
+): Fiber | null {
   switch (workInProgress.tag) {
+    // 原生标签根节点
     case HostRoot:
       return updateHostRoot(current, workInProgress);
+    // 原生标签
     case HostComponent:
       return updateHostComponent(current, workInProgress);
-    case FunctionComponent:
-      return updateFunctionComponent(current, workInProgress);
-    case HostText:
-      return updateHostText(current, workInProgress);
+    // todo
+    // 函数组件
+    // 类组件
+    // Fragment
+    // 文本
   }
 }
 
-function updateHostRoot(current: Fiber | null, workInProgress: Fiber) {
+function updateHostRoot(
+  current: Fiber | null,
+  workInProgress: Fiber
+): Fiber | null {
   return workInProgress.child;
 }
 
-function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
+// 原生标签
+function updateHostComponent(
+  current: Fiber | null,
+  workInProgress: Fiber
+): Fiber | null {
   const type = workInProgress.type;
   if (!workInProgress.stateNode) {
+    // dom节点
     workInProgress.stateNode = document.createElement(type);
+    // todo
     updateNode(workInProgress.stateNode, workInProgress.pendingProps);
   }
-  const nextProps = workInProgress.pendingProps;
-  const prevProps = current !== null ? current.memoizedProps : null;
 
-  let nextChildren = nextProps.children;
-  const isDirectTextChild = shouldSetTextContent(type, nextProps);
+  let nextChildren = workInProgress.pendingProps.children;
+
+  const isDirectTextChild = shouldSetTextContent(
+    type,
+    workInProgress.pendingProps
+  );
 
   if (isDirectTextChild) {
-    // We special case a direct text child of a host node. This is a common
-    // case. We won't handle it as a reified child. We will instead handle
-    // this in the host environment that also has access to this prop. That
-    // avoids allocating another HostText fiber and traversing it.
     nextChildren = null;
-  } else if (prevProps !== null && shouldSetTextContent(type, prevProps)) {
-    // If we're switching from a direct text child to a normal child, or to
-    // empty, we need to schedule the text content to be reset.
-    workInProgress.flags |= ContentReset;
+    return null;
   }
 
   workInProgress.child = reconcileChildren(
@@ -51,27 +60,46 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
     workInProgress,
     nextChildren
   );
-  return workInProgress.child;
-}
-function updateHostText(current, workInProgress) {
-  // Nothing to do here. This is terminal. We'll do the completion step
-  // immediately after.
-  return null;
-}
-
-function updateFunctionComponent(current, workInProgress) {
-  console.log(
-    "%c [  ]-64",
-    "font-size:13px; background:pink; color:#bf2c9f;",
-    workInProgress
-  );
-  const {type, pendingProps} = workInProgress;
-
-  const children = type(pendingProps);
-
-  workInProgress.child = reconcileChildren(current, workInProgress, children);
 
   return workInProgress.child;
+}
+
+// 协调子节点
+// 返回 child ,第一个子fiber
+// diff
+// 只适合初次渲染
+function reconcileChildren(
+  current: Fiber | null,
+  workInProgress: Fiber,
+  nextChildren: any // 对象、数组、字符串
+) {
+  const newChildren = Array.isArray(nextChildren)
+    ? nextChildren
+    : [nextChildren];
+
+  let newIndex = 0;
+  let resultingFirstChild = null;
+  let previousNewFiber = null;
+  for (; newIndex < newChildren.length; newIndex++) {
+    const newChild = newChildren[newIndex];
+    if (newChild === null) {
+      continue;
+    }
+    const newFiber = createFiberFromElement(newChild, workInProgress);
+    // todo 初次更新
+    newFiber.flags = Placement;
+
+    if (previousNewFiber === null) {
+      // newFiber 是第0个fiber
+      resultingFirstChild = newFiber;
+    } else {
+      previousNewFiber.sibling = newFiber;
+    }
+
+    previousNewFiber = newFiber;
+  }
+
+  return resultingFirstChild;
 }
 
 function shouldSetTextContent(type: string, props: any): boolean {
@@ -86,43 +114,14 @@ function shouldSetTextContent(type: string, props: any): boolean {
   );
 }
 
-function reconcileChildren(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  nextChildren: any
-) {
-  const newChildren = Array.isArray(nextChildren)
-    ? nextChildren
-    : [nextChildren];
-  let newIdx = 0;
-  let resultingFirstChild;
-  let previousNewFiber = null; //记录上一次的fiber
-  for (newIdx = 0; newIdx < newChildren.length; newIdx++) {
-    const newChild = newChildren[newIdx];
-    if (newChild == null) {
-      continue;
-    }
-    const newFiber = createFiberFromElement(newChild, workInProgress);
-    newFiber.flags = Placement;
-    if (previousNewFiber === null) {
-      resultingFirstChild = newFiber;
-    } else {
-      previousNewFiber.sibling = newFiber;
-    }
-    previousNewFiber = newFiber;
-  }
-
-  return resultingFirstChild;
-}
-
-export function updateNode(node, nextVal) {
+export function updateNode(dom, nextVal) {
   Object.keys(nextVal).forEach((k) => {
     if (k === "children") {
       if (isStr(nextVal[k])) {
-        node.textContent = nextVal[k] + "";
+        dom.textContent = nextVal[k];
       }
     } else {
-      node[k] = nextVal[k];
+      dom[k] = nextVal[k];
     }
   });
 }
