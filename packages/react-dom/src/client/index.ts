@@ -1,24 +1,26 @@
-import type {FiberRoot} from "react-reconciler/src/ReactInternalTypes";
-import {ReactElement} from "shared/ReactTypes";
-import {updateContainer} from "react-reconciler/src/ReactFiberWorkLoop";
-import {markContainerAsRoot} from "./ReactDOMComponentTree";
+import {FiberRoot} from "react-reconciler/src/ReactInternalTypes";
 import {createFiberRoot} from "react-reconciler/src/ReactFiberRoot";
+import {updateContainer} from "react-reconciler/src/ReactFiberWorkLoop";
 
 function ReactDOMRoot(internalRoot: FiberRoot) {
   this._internalRoot = internalRoot;
 }
 
-ReactDOMRoot.prototype.render = function (children: ReactElement): void {
-  const root = this._internalRoot;
-  updateContainer(children, root);
+ReactDOMRoot.prototype.render = function (children) {
+  console.log(
+    "%c [  ]-11",
+    "font-size:13px; background:pink; color:#bf2c9f;",
+    children
+  );
+  updateContainer(children, this._internalRoot);
 };
 
-function createRoot(container: Element | Document | DocumentFragment) {
+export function createRoot(container: Element | Document | DocumentFragment) {
   const root: FiberRoot = createFiberRoot(container);
-
-  markContainerAsRoot(root.current, container);
 
   return new ReactDOMRoot(root);
 }
 
-export default {createRoot};
+export default {
+  createRoot,
+};
