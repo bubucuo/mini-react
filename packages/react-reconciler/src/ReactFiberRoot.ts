@@ -16,7 +16,7 @@ export function createFiberRoot(containerInfo: Container): FiberRoot {
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
 
-  root.current = createFiber(HostRoot, null, null);
+  root.current = createFiber(HostRoot, null, null, null);
   root.current.stateNode = root;
 
   return root;
