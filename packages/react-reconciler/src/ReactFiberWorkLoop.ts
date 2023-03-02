@@ -3,10 +3,10 @@ import {NormalSchedulerPriority, Scheduler} from "scheduler";
 import {createFiberFromElement} from "./ReactFiber";
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {beginWork} from "./ReactFiberBeginWork";
-import {HostComponent} from "./ReactWorkTags";
+import {HostComponent, HostRoot, HostText} from "./ReactWorkTags";
 import {Placement} from "./ReactFiberFlags";
 
-// current 当前的，在React中对应fiber，对应ouput的fiber
+// current 当前的，在React中对应fiber，对应 output 的fiber
 // work in progress  fiber 工作当中的、正在进行的，
 let workInProgress: Fiber | null = null;
 let workInProgressRoot: FiberRoot | null = null;
@@ -79,20 +79,15 @@ function commitRoot() {
 }
 
 function commitMutationEffectsOnFiber(finishedWork: Fiber, root: FiberRoot) {
-  switch (finishedWork.tag) {
-    case HostComponent:
-      recursivelyTraverseMutationEffects(root, finishedWork);
-      commitReconciliationEffects(finishedWork);
-      return;
-    // 函数组件、类组件等
-  }
+  recursivelyTraverseMutationEffects(root, finishedWork);
+  commitReconciliationEffects(finishedWork);
 }
 
 function recursivelyTraverseMutationEffects(
   root: FiberRoot,
   parentFiber: Fiber
 ) {
-  let child = parentFiber.child;
+  let child: Fiber = parentFiber.child;
   while (child != null) {
     commitMutationEffectsOnFiber(child, root);
     child = child.sibling;
@@ -109,19 +104,36 @@ function commitReconciliationEffects(finishedWork: Fiber) {
 
 // 新增插入、移动位置
 // todo 函数组件、类组件这里需要修改
+// 更新
 function commitPlacement(finishedWork: Fiber) {
-  const parentFiber = finishedWork.return;
-  // todo
-  // 父dom节点
-  const parent = parentFiber.stateNode;
-  console.log(
-    "%c [ parent ]-115",
-    "font-size:13px; background:pink; color:#bf2c9f;",
-    parent,
-    finishedWork,
-    finishedWork.stateNode
-  );
-  if (finishedWork.stateNode) {
-    parent.appendChild(finishedWork.stateNode);
+  // 获取父dom对应的fiber
+  const parentFiber = getHostParentFiber(finishedWork);
+
+  switch (parentFiber.tag) {
+    case HostComponent:
+      const parent = parentFiber.stateNode;
+      if (
+        (finishedWork.tag === HostComponent || finishedWork.tag === HostText) &&
+        finishedWork.stateNode
+      ) {
+        parent.appendChild(finishedWork.stateNode);
+      }
+      break;
   }
+}
+
+// 获取父dom对应的fiber
+function getHostParentFiber(fiber: Fiber): Fiber {
+  let parent = fiber.return;
+
+  while (parent != null) {
+    if (isHostParent(parent)) {
+      return parent;
+    }
+    parent = parent.return;
+  }
+}
+
+function isHostParent(fiber: Fiber): boolean {
+  return fiber.tag === HostComponent || fiber.tag === HostRoot;
 }
