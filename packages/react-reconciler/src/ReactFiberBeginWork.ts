@@ -9,7 +9,9 @@ import {
   HostRoot,
   HostText,
 } from "./ReactWorkTags";
-import {isStr} from "../../shared/utils";
+import {isStr, isNum} from "../../shared/utils";
+import {renderHooks} from "./ReactFiberHooks";
+import {reconcileChildren} from "./ReactChildFiber";
 
 export function beginWork(
   current: Fiber | null,
@@ -56,7 +58,7 @@ function updateHostComponent(
     // dom节点
     workInProgress.stateNode = document.createElement(type);
     // todo
-    updateNode(workInProgress.stateNode, workInProgress.pendingProps);
+    updateNode(workInProgress.stateNode, {}, workInProgress.pendingProps);
   }
 
   let nextChildren = workInProgress.pendingProps.children;
@@ -86,6 +88,7 @@ function updateFunctionComponent(
   current: Fiber | null,
   workInProgress: Fiber
 ): Fiber | null {
+  renderHooks(workInProgress);
   const {type, pendingProps} = workInProgress;
 
   const children = type(pendingProps);
@@ -143,7 +146,7 @@ function updateFragment(
 // 返回 child ,第一个子fiber
 // diff
 // 只适合初次渲染
-function reconcileChildren(
+function _reconcileChildren(
   current: Fiber | null,
   workInProgress: Fiber,
   nextChildren: any // 对象、数组、字符串
@@ -196,14 +199,38 @@ function shouldSetTextContent(type: string, props: any): boolean {
   );
 }
 
-export function updateNode(dom, nextVal) {
-  Object.keys(nextVal).forEach((k) => {
-    if (k === "children") {
-      if (isStr(nextVal[k])) {
-        dom.textContent = nextVal[k];
+export function updateNode(node, prevVal, nextVal) {
+  Object.keys(prevVal)
+    // .filter(k => k !== "children")
+    .forEach((k) => {
+      if (k === "children") {
+        // 有可能是文本
+        if (isStr(nextVal[k]) || isNum(nextVal[k])) {
+          node.textContent = "";
+        }
+      } else if (k.slice(0, 2) === "on") {
+        const eventName = k.slice(2).toLocaleLowerCase();
+        node.removeEventListener(eventName, prevVal[k]);
+      } else {
+        if (!(k in nextVal)) {
+          node[k] = "";
+        }
       }
-    } else {
-      dom[k] = nextVal[k];
-    }
-  });
+    });
+
+  Object.keys(nextVal)
+    // .filter(k => k !== "children")
+    .forEach((k) => {
+      if (k === "children") {
+        // 有可能是文本
+        if (isStr(nextVal[k]) || isNum(nextVal[k])) {
+          node.textContent = nextVal[k] + "";
+        }
+      } else if (k.slice(0, 2) === "on") {
+        const eventName = k.slice(2).toLocaleLowerCase();
+        node.addEventListener(eventName, nextVal[k]);
+      } else {
+        node[k] = nextVal[k];
+      }
+    });
 }
