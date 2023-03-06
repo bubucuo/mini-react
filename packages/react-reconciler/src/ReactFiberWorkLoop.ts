@@ -102,7 +102,7 @@ function recursivelyTraverseMutationEffects(
 }
 
 // fiber.flags
-// 新增插入、移动位置、更新属性
+// 新增插入、移动位置、更新属性、节点删除
 function commitReconciliationEffects(finishedWork: Fiber) {
   const flags = finishedWork.flags;
 
@@ -122,21 +122,56 @@ function commitReconciliationEffects(finishedWork: Fiber) {
 
     finishedWork.flags &= ~Update;
   }
+
+  if (finishedWork.deletions) {
+    // parentFiber 是 deletions 的父dom节点对应的fiber
+    const parentFiber = isHostParent(finishedWork)
+      ? finishedWork
+      : getHostParentFiber(finishedWork);
+    const parent = parentFiber.stateNode;
+    commitDeletions(finishedWork.deletions, parent);
+    finishedWork.deletions = null;
+  }
+}
+
+function commitDeletions(deletions: Array<Fiber>, parent: Element) {
+  deletions.forEach((deletion) => {
+    // 找到deletion的dom节点
+    parent.removeChild(getStateNode(deletion));
+  });
+}
+
+// 原生节点：原生标签、文本节点
+function isHost(fiber: Fiber) {
+  return fiber.tag === HostComponent || fiber.tag === HostText;
+}
+
+function getStateNode(fiber: Fiber) {
+  let node = fiber;
+
+  while (1) {
+    if (isHost(node) && node.stateNode) {
+      return node.stateNode;
+    }
+    node = node.child;
+  }
 }
 
 // 在dom上，把子节点插入到父节点里
 function commitPlacement(finishedWork: Fiber) {
   const parentFiber = getHostParentFiber(finishedWork);
 
-  // 获取父dom节点
-  const parent = parentFiber.stateNode;
-
   // 插入父dom
   if (
     finishedWork.stateNode &&
     (finishedWork.tag === HostText || finishedWork.tag === HostComponent)
   ) {
-    parent.appendChild(finishedWork.stateNode);
+    // 获取父dom节点
+    const parent = parentFiber.stateNode;
+    // dom节点
+    const before = getHostSibling(finishedWork);
+    insertOrAppendPlacementNode(finishedWork, before, parent);
+    // parent.appendChild(finishedWork.stateNode);
   }
 }
 
@@ -155,4 +190,68 @@ function getHostParentFiber(fiber: Fiber): Fiber {
 // 检查 fiber 是否可以是父 dom 节点
 function isHostParent(fiber: Fiber): boolean {
   return fiber.tag === HostComponent || fiber.tag === HostRoot;
+}
+
+// 返回fiber的下一个兄弟dom节点
+// 不一定
+function getHostSibling(fiber: Fiber) {
+  let node = fiber;
+
+  sibling: while (1) {
+    while (node.sibling === null) {
+      if (node.return === null || isHostParent(node.return)) {
+        return null;
+      }
+      node = node.return;
+    }
+
+    node.sibling.return = node.return;
+    node = node.sibling;
+
+    while (node.tag !== HostComponent && node.tag !== HostText) {
+      if (node.flags & Placement) {
+        // Placement表示节点是新增插入或者移动位置
+        continue sibling;
+      }
+
+      if (node.child === null) {
+        continue sibling;
+      } else {
+        node.child.return = node;
+        node = node.child;
+      }
+    }
+
+    if (!(node.flags & Placement)) {
+      return node.stateNode;
+    }
+  }
+}
+// 新增插入 | 位置移动
+// insertBefore | appendChild
+function insertOrAppendPlacementNode(
+  node: Fiber,
+  before: Element,
+  parent: Element
+) {
+  const {tag} = node;
+  const isHost = tag === HostComponent || HostText;
+  if (isHost) {
+    const stateNode = node.stateNode;
+    if (before) {
+      parent.insertBefore(stateNode, before);
+    } else {
+      parent.appendChild(stateNode);
+    }
+  } else {
+    const child = node.child;
+    if (child !== null) {
+      insertOrAppendPlacementNode(child, before, parent);
+      let sibling = child.sibling;
+      while (sibling !== null) {
+        insertOrAppendPlacementNode(sibling, before, parent);
+        sibling = sibling.sibling;
+      }
+    }
+  }
 }

@@ -1,7 +1,5 @@
 import {isNum, isStr} from "shared/utils";
 import {reconcileChildren} from "./ReactChildFiber";
-import {createFiberFromElement, createFiberFromText} from "./ReactFiber";
-import {Placement} from "./ReactFiberFlags";
 import {renderHooks} from "./ReactFiberHooks";
 import {Fiber} from "./ReactInternalTypes";
 import {
@@ -69,11 +67,6 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
     nextChildren
   );
 
-  console.log(
-    "%c [  ]-47",
-    "font-size:13px; background:pink; color:#bf2c9f;",
-    workInProgress
-  );
   return workInProgress.child;
 }
 
@@ -116,46 +109,6 @@ function updateFragment(current: Fiber | null, workInProgress: Fiber) {
     workInProgress.pendingProps.children
   );
   return workInProgress.child;
-}
-
-// 1. 返回 child：第一个子fiber
-// 2. 构建 child 单链表
-function _reconcileChildren(
-  current: Fiber | null,
-  workInProgress: Fiber,
-  nextChildren: any // 数组、对象、文本
-): Fiber | null {
-  const newChildren = Array.isArray(nextChildren)
-    ? nextChildren
-    : [nextChildren];
-
-  let newIndex = 0;
-  let resultingFirstChild = null;
-  let previousNewFiber = null;
-  for (; newIndex < newChildren.length; newIndex++) {
-    const newChild = newChildren[newIndex];
-    if (newChild == null) {
-      continue;
-    }
-
-    let newFiber: Fiber;
-    if (isStr(newChild)) {
-      newFiber = createFiberFromText(newChild, workInProgress);
-    } else {
-      newFiber = createFiberFromElement(newChild, workInProgress);
-    }
-
-    // 初次渲染
-    newFiber.flags = Placement;
-    if (previousNewFiber === null) {
-      resultingFirstChild = newFiber;
-    } else {
-      previousNewFiber.sibling = newFiber;
-    }
-    previousNewFiber = newFiber;
-  }
-
-  return resultingFirstChild;
 }
 
 function shouldSetTextContent(type: string, props: any): boolean {

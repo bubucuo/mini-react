@@ -13,3 +13,7 @@ body {
   border: solid red 1px;
   font-size: 14px;
 }
+
+ul {
+  margin: 60px 0;
+}
