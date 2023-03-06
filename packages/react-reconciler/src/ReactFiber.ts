@@ -3,7 +3,7 @@ import {isFn} from "shared/utils";
 import {NoFlags} from "./ReactFiberFlags";
 import {Fiber} from "./ReactInternalTypes";
 import {isStr} from "../../shared/utils";
-import {Fragment, HostComponent} from "./ReactWorkTags";
+import {Fragment, HostComponent, HostText} from "./ReactWorkTags";
 import {
   IndeterminateComponent,
   WorkTag,
@@ -116,4 +116,12 @@ function shouldConstruct(Component: Function) {
   const prototype = Component.prototype;
 
   return !!(prototype && prototype.isReactComponent);
+}
+
+export function createFiberFromText(
+  content: string,
+  returnFiber: Fiber
+): Fiber {
+  const fiber = createFiber(HostText, content, null, returnFiber);
+  return fiber;
 }

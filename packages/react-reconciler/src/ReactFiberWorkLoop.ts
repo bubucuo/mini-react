@@ -3,7 +3,7 @@ import {NormalPriority, Scheduler} from "scheduler";
 import {createFiberFromElement} from "./ReactFiber";
 import {FiberRoot, Fiber} from "./ReactInternalTypes";
 import {beginWork} from "./ReactFiberBeginWork";
-import {HostComponent} from "./ReactWorkTags";
+import {HostComponent, HostRoot, HostText} from "./ReactWorkTags";
 import {Placement} from "./ReactFiberFlags";
 
 // work in progress 正在工作当中的
@@ -85,11 +85,8 @@ function commitRoot() {
 }
 
 function commitMutationEffects(finishedWork: Fiber, root: FiberRoot) {
-  switch (finishedWork.tag) {
-    case HostComponent:
-      recursivelyTraverseMutationEffects(root, finishedWork);
-      commitReconciliationEffects(finishedWork);
-  }
+  recursivelyTraverseMutationEffects(root, finishedWork);
+  commitReconciliationEffects(finishedWork);
 }
 
 function recursivelyTraverseMutationEffects(
@@ -117,11 +114,33 @@ function commitReconciliationEffects(finishedWork: Fiber) {
 
 // 在dom上，把子节点插入到父节点里
 function commitPlacement(finishedWork: Fiber) {
-  const parentFiber = finishedWork.return;
+  const parentFiber = getHostParentFiber(finishedWork);
+
   // 获取父dom节点
   const parent = parentFiber.stateNode;
 
-  if (finishedWork.stateNode) {
+  // 插入父dom
+  if (
+    finishedWork.stateNode &&
+    (finishedWork.tag === HostText || finishedWork.tag === HostComponent)
+  ) {
     parent.appendChild(finishedWork.stateNode);
   }
+}
+
+// 返回 fiber 的父dom节点对应的fiber
+function getHostParentFiber(fiber: Fiber): Fiber {
+  let parent = fiber.return;
+
+  while (parent !== null) {
+    if (isHostParent(parent)) {
+      return parent;
+    }
+    parent = parent.return;
+  }
+}
+
+// 检查 fiber 是否可以是父 dom 节点
+function isHostParent(fiber: Fiber): boolean {
+  return fiber.tag === HostComponent || fiber.tag === HostRoot;
 }

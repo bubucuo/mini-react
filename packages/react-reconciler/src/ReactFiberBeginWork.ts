@@ -1,8 +1,15 @@
 import {isStr} from "shared/utils";
-import {createFiberFromElement} from "./ReactFiber";
+import {createFiberFromElement, createFiberFromText} from "./ReactFiber";
 import {Placement} from "./ReactFiberFlags";
 import {Fiber} from "./ReactInternalTypes";
-import {HostComponent, HostRoot} from "./ReactWorkTags";
+import {
+  HostComponent,
+  HostRoot,
+  FunctionComponent,
+  ClassComponent,
+  HostText,
+  Fragment,
+} from "./ReactWorkTags";
 
 // 1. 处理当前fiber，因为不同组件对应的fiber处理方式不同，
 // 2. 返回子节点
@@ -13,6 +20,19 @@ export function beginWork(current: Fiber | null, workInProgress: Fiber) {
 
     case HostComponent:
       return updateHostComponent(current, workInProgress);
+
+    case FunctionComponent:
+      return updateFunctionComponent(current, workInProgress);
+    case ClassComponent:
+      return updateClassComponent(current, workInProgress);
+
+    // 文本节点
+    case HostText:
+      return updateHostText(current, workInProgress);
+
+    // 文本节点
+    case Fragment:
+      return updateFragment(current, workInProgress);
   }
 }
 
@@ -55,6 +75,46 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
   return workInProgress.child;
 }
 
+// 函数组件
+function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
+  const {type, pendingProps} = workInProgress;
+  const children = type(pendingProps);
+
+  workInProgress.child = reconcileChildren(current, workInProgress, children);
+  return workInProgress.child;
+}
+
+// 类组件
+function updateClassComponent(current: Fiber | null, workInProgress: Fiber) {
+  const {type, pendingProps} = workInProgress;
+  const instance = new type(pendingProps);
+  workInProgress.stateNode = instance;
+
+  const children = instance.render();
+
+  workInProgress.child = reconcileChildren(current, workInProgress, children);
+  return workInProgress.child;
+}
+
+// 文本节点
+function updateHostText(current: Fiber | null, workInProgress: Fiber) {
+  const {pendingProps} = workInProgress;
+
+  if (!workInProgress.stateNode) {
+    workInProgress.stateNode = document.createTextNode(pendingProps);
+  }
+  return null;
+}
+
+function updateFragment(current: Fiber | null, workInProgress: Fiber) {
+  workInProgress.child = reconcileChildren(
+    current,
+    workInProgress,
+    workInProgress.pendingProps.children
+  );
+  return workInProgress.child;
+}
+
 // 1. 返回 child：第一个子fiber
 // 2. 构建 child 单链表
 function reconcileChildren(
@@ -75,7 +135,12 @@ function reconcileChildren(
       continue;
     }
 
-    const newFiber = createFiberFromElement(newChild, workInProgress);
+    let newFiber: Fiber;
+    if (isStr(newChild)) {
+      newFiber = createFiberFromText(newChild, workInProgress);
+    } else {
+      newFiber = createFiberFromElement(newChild, workInProgress);
+    }
 
     // 初次渲染
     newFiber.flags = Placement;
