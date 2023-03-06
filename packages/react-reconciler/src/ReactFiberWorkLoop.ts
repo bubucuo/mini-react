@@ -2,9 +2,9 @@ import {ReactElement} from "shared/ReactTypes";
 import {NormalPriority, Scheduler} from "scheduler";
 import {createFiberFromElement} from "./ReactFiber";
 import {FiberRoot, Fiber} from "./ReactInternalTypes";
-import {beginWork} from "./ReactFiberBeginWork";
+import {beginWork, updateNode} from "./ReactFiberBeginWork";
 import {HostComponent, HostRoot, HostText} from "./ReactWorkTags";
-import {Placement} from "./ReactFiberFlags";
+import {Placement, Update} from "./ReactFiberFlags";
 
 // work in progress 正在工作当中的
 // current
@@ -109,6 +109,18 @@ function commitReconciliationEffects(finishedWork: Fiber) {
   if (flags & Placement) {
     commitPlacement(finishedWork);
     finishedWork.flags &= ~Placement;
+  }
+
+  if (flags & Update) {
+    if (finishedWork.stateNode && finishedWork.tag === HostComponent) {
+      updateNode(
+        finishedWork.stateNode,
+        finishedWork.alternate.pendingProps,
+        finishedWork.pendingProps
+      );
+    }
+
+    finishedWork.flags &= ~Update;
   }
 }
 
