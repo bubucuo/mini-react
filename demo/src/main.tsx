@@ -1,4 +1,4 @@
-import {ReactDOM, Component, useReducer} from "../which-react";
+import {ReactDOM, Component, useReducer, useState} from "../which-react";
 
 import "./index.css";
 
@@ -14,15 +14,18 @@ import "./index.css";
 
 function FunctionComponent(props: {name: string}) {
   const [count, setCount] = useReducer((x) => x + 1, 0);
+  const [count2, setCount2] = useState(0);
 
   return (
     <div className="border">
       <p>{props.name}</p>
       <button onClick={() => setCount()}>{count}</button>
+      <button onClick={() => setCount2(count2 + 1)}>{count2}</button>
 
       {count % 2 ? <div>omg</div> : <span>123</span>}
 
       <ul>
+        {/* <li>随着count2的奇偶性变化</li> */}
         {count % 2 === 0
           ? [2, 1, 3, 4].map((item) => {
               return <li key={item}>{item}</li>;

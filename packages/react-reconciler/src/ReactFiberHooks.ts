@@ -1,3 +1,4 @@
+import {isFn} from "shared/utils";
 import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
@@ -52,7 +53,9 @@ export function useReducer(reducer: Function, initialState: any) {
     hook.memorizedState = initialState;
   }
   const dispatch = (action) => {
-    hook.memorizedState = reducer(hook.memorizedState, action);
+    hook.memorizedState = reducer
+      ? reducer(hook.memorizedState, action)
+      : action;
 
     const root = getRootForUpdatedFiber(currentlyRenderingFiber);
 
@@ -75,4 +78,9 @@ function getRootForUpdatedFiber(sourceFiber: Fiber): FiberRoot {
   }
 
   return node.tag === HostRoot ? node.stateNode : null;
+}
+
+// initialState 函数 | state
+export function useState(initialState: any) {
+  return useReducer(null, isFn(initialState) ? initialState() : initialState);
 }
