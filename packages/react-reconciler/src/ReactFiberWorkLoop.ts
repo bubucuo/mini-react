@@ -4,7 +4,7 @@ import {createFiberFromElement} from "./ReactFiber";
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {beginWork, updateNode} from "./ReactFiberBeginWork";
 import {HostComponent, HostRoot, HostText} from "./ReactWorkTags";
-import {Placement, Update} from "./ReactFiberFlags";
+import {ChildDeletion, Placement, Update} from "./ReactFiberFlags";
 
 // current 当前的，在React中对应fiber，对应 output 的fiber
 // work in progress  fiber 工作当中的、正在进行的，
@@ -13,6 +13,7 @@ let workInProgressRoot: FiberRoot | null = null;
 
 export function updateContainer(element: ReactElement, root: FiberRoot) {
   root.current.child = createFiberFromElement(element, root.current);
+  // root.current.child.flags = Placement;
 
   scheduleUpdateOnFiber(root, root.current);
 }
@@ -68,6 +69,8 @@ function commitRoot() {
     workInProgressRoot.current.child.stateNode
   );
 
+  // commitMutationEffects(root.current.child, root);
+
   // commit
   commitMutationEffectsOnFiber(
     workInProgressRoot.current.child,
@@ -77,6 +80,11 @@ function commitRoot() {
   workInProgressRoot = null;
   workInProgress = null;
 }
+
+// function commitMutationEffects(finishedWork: Fiber, root: FiberRoot) {
+//   recursivelyTraverseMutationEffects(root, finishedWork);
+//   commitReconciliationEffects(finishedWork);
+// }
 
 function commitMutationEffectsOnFiber(finishedWork: Fiber, root: FiberRoot) {
   recursivelyTraverseMutationEffects(root, finishedWork);
@@ -110,27 +118,101 @@ function commitReconciliationEffects(finishedWork: Fiber) {
       );
     }
 
-    finishedWork.flags &= ~Placement;
+    finishedWork.flags &= ~Update;
+  }
+
+  // 在dom上删除，需要父子dom节点
+  // 但是不是所有fiber节点都有dom
+  if (flags & ChildDeletion) {
+    // parentFiber 是 deletions 的父dom节点对应的fiber
+    const parentFiber = isHostParent(finishedWork)
+      ? finishedWork
+      : getHostParentFiber(finishedWork);
+    //
+    const parent = parentFiber.stateNode;
+    commitDeletions(finishedWork.deletions, parent);
+    finishedWork.deletions = null;
+    finishedWork.flags &= ~ChildDeletion;
+  }
+}
+
+function commitDeletions(deletions: Array<Fiber>, parent: Element) {
+  deletions.forEach((deletion) => {
+    // 删除 deletion 对应的dom
+    parent.removeChild(getStateNode(deletion));
+  });
+}
+
+function getStateNode(fiber: Fiber) {
+  let node = fiber;
+  while (1) {
+    if (isHostChild(node) && node.stateNode) {
+      return node.stateNode;
+    }
+    node = node.child;
   }
 }
 
 // 新增插入、移动位置
-// todo 函数组件、类组件这里需要修改
 // 更新
+// child0->child1->child2->child3
+// 寻找child0的dom节点的兄弟dom节点
 function commitPlacement(finishedWork: Fiber) {
   // 获取父dom对应的fiber
-  const parentFiber = getHostParentFiber(finishedWork);
 
-  switch (parentFiber.tag) {
-    case HostComponent:
-      const parent = parentFiber.stateNode;
-      if (
-        (finishedWork.tag === HostComponent || finishedWork.tag === HostText) &&
-        finishedWork.stateNode
-      ) {
-        parent.appendChild(finishedWork.stateNode);
+  // 原生子节点
+  if (finishedWork.stateNode && isHostChild(finishedWork)) {
+    const parentFiber = getHostParentFiber(finishedWork);
+    const parent = parentFiber.stateNode;
+
+    const before = getHostSibling(finishedWork);
+    insertOrAppendPlacementNode(finishedWork, before, parent);
+  }
+}
+
+// 返回 fiber 的下一个在文档流里的兄弟dom节点
+function getHostSibling(fiber: Fiber) {
+  let node = fiber;
+
+  sibling: while (1) {
+    while (node.sibling === null) {
+      if (node.return === null || isHostParent(node.return)) {
+        return null;
       }
-      break;
+      node = node.return;
+    }
+
+    node.sibling.return = node.return;
+    node = node.sibling;
+
+    while (!isHostChild(node)) {
+      if (node.flags & Placement) {
+        continue sibling;
+      }
+
+      if (node.child === null) {
+        continue sibling;
+      } else {
+        node.child.return = node;
+        node = node.child;
+      }
+    }
+    if (!(node.flags & Placement)) {
+      return node.stateNode;
+    }
+  }
+}
+
+function insertOrAppendPlacementNode(
+  node: Fiber,
+  before: Element,
+  parent: Element
+) {
+  const {stateNode} = node;
+  if (before) {
+    parent.insertBefore(stateNode, before);
+  } else {
+    parent.appendChild(stateNode);
   }
 }
 
@@ -148,4 +230,8 @@ function getHostParentFiber(fiber: Fiber): Fiber {
 
 function isHostParent(fiber: Fiber): boolean {
   return fiber.tag === HostComponent || fiber.tag === HostRoot;
+}
+
+function isHostChild(fiber: Fiber): boolean {
+  return fiber.tag === HostComponent || fiber.tag === HostText;
 }

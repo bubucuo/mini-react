@@ -11,6 +11,7 @@ import {
   FunctionComponent,
 } from "./ReactWorkTags";
 import {REACT_FRAGMENT_TYPE} from "shared/ReactSymbols";
+import {NoLanes} from "./ReactFiberLane";
 
 // 创建一个fiber
 export function createFiber(
@@ -48,6 +49,9 @@ function FiberNode(
   this.sibling = null;
   // 记录了节点在兄弟节点中的位置下标，用于diff时候判断节点是否需要发生移动
   this.index = 0;
+
+  this.lanes = NoLanes;
+  this.childLanes = NoLanes;
 
   this.pendingProps = pendingProps;
   this.memoizedProps = null;

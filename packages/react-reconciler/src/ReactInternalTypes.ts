@@ -1,5 +1,6 @@
 import type {WorkTag} from "./ReactWorkTags";
 import type {Flags} from "./ReactFiberFlags";
+import {Lane, LaneMap, Lanes} from "./ReactFiberLane";
 
 export type Fiber = {
   // 标记组件类型
@@ -49,8 +50,8 @@ export type Fiber = {
   // Singly linked list fast path to the next fiber with side-effects.
   nextEffect: Fiber | null;
 
-  // lanes: Lanes;
-  // childLanes: Lanes;
+  lanes: Lanes;
+  childLanes: Lanes;
 
   // 用于 diff 阶段
   alternate: Fiber | null;
@@ -70,4 +71,11 @@ export type FiberRoot = {
 
   // Scheduler.scheduleCallback 返回的节点，记录下一个任务
   callbackNode: any;
+  callbackPriority: Lane;
+
+  eventTimes: LaneMap<number>;
+
+  pendingLanes: Lanes;
+
+  finishedLanes: Lanes;
 };

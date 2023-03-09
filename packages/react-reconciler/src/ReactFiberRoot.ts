@@ -1,4 +1,5 @@
 import {createFiber} from "./ReactFiber";
+import {createLaneMap, NoLane, NoLanes} from "./ReactFiberLane";
 import {Container, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
 
@@ -17,4 +18,12 @@ export function FiberRootNode(containerInfo) {
   this.current = null;
   this.finishedWork = null;
   this.callbackNode = null;
+
+  this.callbackPriority = NoLane;
+  this.eventTimes = createLaneMap(NoLanes);
+
+  this.pendingLanes = NoLanes;
+  this.pingedLanes = NoLanes;
+
+  this.finishedLanes = NoLanes;
 }

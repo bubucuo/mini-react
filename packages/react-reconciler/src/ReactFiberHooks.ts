@@ -1,3 +1,4 @@
+import {isFn} from "shared/utils";
 import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
@@ -56,14 +57,35 @@ export function useReducer(reducer: Function, initialState: any) {
     // 初次渲染
     hook.memorizedState = initialState;
   }
-  const dispatch = (action: any) => {
-    hook.memorizedState = reducer(hook.memorizedState, action);
-    const root = getRootForUpdatedFiber(currentlyRenderingFiber);
-    currentlyRenderingFiber.alternate = {...currentlyRenderingFiber};
-    // 当前函数组件的fiber
-    scheduleUpdateOnFiber(root, currentlyRenderingFiber);
-  };
+  const dispatch = dispatchReducerAction.bind(
+    null,
+    currentlyRenderingFiber,
+    hook,
+    reducer
+  );
   return [hook.memorizedState, dispatch];
+}
+
+function dispatchReducerAction(
+  fiber: Fiber,
+  hook: Hook,
+  reducer: any,
+  action: any
+) {
+  // 兼容了 useReducer 和 useState
+  hook.memorizedState = reducer
+    ? reducer(hook.memorizedState, action)
+    : isFn(action)
+    ? action()
+    : action;
+  const root = getRootForUpdatedFiber(fiber);
+  fiber.alternate = {...fiber};
+  // 当前函数组件的fiber
+  scheduleUpdateOnFiber(root, fiber);
+}
+
+export function useState(initialState: any) {
+  return useReducer(null, initialState);
 }
 
 // 根据 sourceFiber 找根节点
