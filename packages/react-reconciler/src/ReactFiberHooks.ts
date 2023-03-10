@@ -1,5 +1,16 @@
 import {isFn} from "shared/utils";
+import {
+  Flags,
+  Passive as PassiveEffect,
+  Update as UpdateEffect,
+} from "./ReactFiberFlags";
 import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
+import {
+  HookFlags,
+  HookHasEffect,
+  HookLayout,
+  HookPassive,
+} from "./ReactHookEffectTags";
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
 
@@ -7,12 +18,22 @@ type Hook = {
   memorizedState: any; // state
   next: Hook | null; // 下一个hook
 };
+
+type Effect = {
+  tag: HookFlags;
+  create: () => (() => void) | void;
+  deps: Array<unknown> | void | null;
+  next: Effect | null;
+};
+
 let currentlyRenderingFiber: Fiber = null;
 let workInProgressHook: Hook = null;
+let currentHook: Hook = null;
 
 // 获取当前正在执行的函数组件的fiber
 export function renderHooks(workInProgress: Fiber) {
   currentlyRenderingFiber = workInProgress;
+  currentlyRenderingFiber.updateQueue = null;
   workInProgressHook = null;
 }
 
@@ -24,12 +45,15 @@ function updateWorkInProgressHook(): Hook {
     currentlyRenderingFiber.memoizedState = current.memoizedState;
     if (workInProgressHook) {
       workInProgressHook = hook = workInProgressHook.next;
+      currentHook = currentHook.next;
     } else {
       hook = workInProgressHook = currentlyRenderingFiber.memoizedState;
+      currentHook = current.memoizedState;
     }
     // 更新
   } else {
     // 初次渲染
+    currentHook = null;
     hook = {
       memorizedState: null,
       next: null,
@@ -83,4 +107,93 @@ function getRootForUpdatedFiber(sourceFiber: Fiber): FiberRoot {
 // initialState 函数 | state
 export function useState(initialState: any) {
   return useReducer(null, isFn(initialState) ? initialState() : initialState);
+}
+
+export function useEffect(
+  create: () => (() => void) | void,
+  deps: Array<unknown> | void | null
+) {
+  return updateEffectImpl(PassiveEffect, HookPassive, create, deps);
+}
+
+export function useLayoutEffect(
+  create: () => (() => void) | void,
+  deps: Array<unknown> | void | null
+) {
+  return updateEffectImpl(UpdateEffect, HookLayout, create, deps);
+}
+
+function updateEffectImpl(
+  fiberFlags: Flags,
+  hookFlags: HookFlags,
+  create: () => (() => void) | void,
+  deps: Array<unknown> | void | null
+) {
+  const hook = updateWorkInProgressHook();
+
+  const nextDeps = deps === undefined ? null : deps;
+
+  if (currentHook) {
+    // 检查deps的变化
+    const prevEffect = currentHook.memorizedState;
+
+    if (deps) {
+      const prevDeps = prevEffect.deps;
+      if (areHookInputsEqual(deps, prevDeps)) {
+        return;
+      }
+    }
+  }
+
+  currentlyRenderingFiber.flags |= fiberFlags;
+  hook.memorizedState = pushEffect(HookHasEffect | hookFlags, create, nextDeps);
+}
+
+function pushEffect(
+  tag: HookFlags,
+  create: () => (() => void) | void,
+  deps: Array<unknown> | void | null
+) {
+  const effect: Effect = {
+    tag,
+    create,
+    deps,
+    next: null,
+  };
+
+  // 单向循环链表
+  let componentUpdateQueue = currentlyRenderingFiber.updateQueue;
+
+  if (componentUpdateQueue === null) {
+    // 第一个effect
+    componentUpdateQueue = {lastEffect: null};
+    currentlyRenderingFiber.updateQueue = componentUpdateQueue;
+    componentUpdateQueue.lastEffect = effect.next = effect;
+  } else {
+    // 在原先的 effect 后面累加
+    const lastEffect = componentUpdateQueue.lastEffect;
+    const firstEffect = lastEffect.next;
+    lastEffect.next = effect;
+    effect.next = firstEffect;
+    componentUpdateQueue.lastEffect = effect;
+  }
+
+  return effect;
+}
+
+export function areHookInputsEqual(
+  nextDeps: Array<unknown>,
+  prevDeps: Array<unknown> | null
+): boolean {
+  if (prevDeps === null) {
+    return false;
+  }
+
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+    if (Object.is(nextDeps[i], prevDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+  return true;
 }

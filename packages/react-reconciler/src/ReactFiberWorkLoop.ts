@@ -3,8 +3,15 @@ import {NormalPriority, Scheduler} from "scheduler";
 import {createFiberFromElement} from "./ReactFiber";
 import {FiberRoot, Fiber} from "./ReactInternalTypes";
 import {beginWork, updateNode} from "./ReactFiberBeginWork";
-import {HostComponent, HostRoot, HostText} from "./ReactWorkTags";
+import {
+  HostComponent,
+  HostRoot,
+  HostText,
+  FunctionComponent,
+} from "./ReactWorkTags";
 import {Placement, Update} from "./ReactFiberFlags";
+import {HookLayout, HookFlags, HookHasEffect} from "./ReactHookEffectTags";
+import {create} from "../../../../../library/react/packages/react-native-renderer/src/ReactNativeAttributePayload";
 
 // work in progress 正在工作当中的
 // current
@@ -109,12 +116,19 @@ function commitReconciliationEffects(finishedWork: Fiber) {
   }
 
   if (flags & Update) {
-    if (finishedWork.stateNode && finishedWork.tag === HostComponent) {
-      updateNode(
-        finishedWork.stateNode,
-        finishedWork.alternate.pendingProps,
-        finishedWork.pendingProps
-      );
+    switch (finishedWork.tag) {
+      case HostComponent:
+        if (finishedWork.stateNode) {
+          updateNode(
+            finishedWork.stateNode,
+            finishedWork.alternate.pendingProps,
+            finishedWork.pendingProps
+          );
+        }
+        break;
+
+      case FunctionComponent:
+        commitHookEffects(finishedWork, HookLayout | HookHasEffect);
     }
 
     finishedWork.flags &= ~Update;
@@ -131,6 +145,23 @@ function commitReconciliationEffects(finishedWork: Fiber) {
   }
 }
 
+function commitHookEffects(finishedWork: Fiber, hookFlags: HookFlags) {
+  const updateQueue = finishedWork.updateQueue;
+
+  const lastEffect = updateQueue != null ? updateQueue.lastEffect : null;
+  if (lastEffect) {
+    const firstEffect = lastEffect.next;
+    let effect = firstEffect;
+
+    do {
+      if ((effect.tag & hookFlags) === hookFlags) {
+        const create = effect.create;
+        effect.destory = create();
+      }
+      effect = effect.next;
+    } while (effect !== firstEffect);
+  }
+}
 function commitDeletions(deletions: Array<Fiber>, parent: Element) {
   deletions.forEach((deletion) => {
     // 找到deletion的dom节点
