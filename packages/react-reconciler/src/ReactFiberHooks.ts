@@ -4,7 +4,7 @@ import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
 
 type Hook = {
-  memorizedState: any; // state
+  memoizedState: any; // state
   next: Hook | null; // 下一个hook
 };
 let currentlyRenderingFiber: Fiber = null;
@@ -31,7 +31,7 @@ function updateWorkInProgressHook(): Hook {
   } else {
     // 初次渲染
     hook = {
-      memorizedState: null,
+      memoizedState: null,
       next: null,
     };
 
@@ -50,12 +50,10 @@ export function useReducer(reducer: Function, initialState: any) {
 
   if (!currentlyRenderingFiber.alternate) {
     // 函数组件初次渲染
-    hook.memorizedState = initialState;
+    hook.memoizedState = initialState;
   }
   const dispatch = (action) => {
-    hook.memorizedState = reducer
-      ? reducer(hook.memorizedState, action)
-      : action;
+    hook.memoizedState = reducer ? reducer(hook.memoizedState, action) : action;
 
     const root = getRootForUpdatedFiber(currentlyRenderingFiber);
 
@@ -64,7 +62,7 @@ export function useReducer(reducer: Function, initialState: any) {
     scheduleUpdateOnFiber(root, currentlyRenderingFiber);
   };
 
-  return [hook.memorizedState, dispatch];
+  return [hook.memoizedState, dispatch];
 }
 
 // 根据 sourceFiber 找根节点
