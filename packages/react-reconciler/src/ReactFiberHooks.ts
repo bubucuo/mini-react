@@ -218,3 +218,24 @@ export function useMemo<T>(
   hook.memoizedState = [nextValue, nextDeps];
   return nextValue;
 }
+
+export function useCallback<T>(
+  callback: T,
+  deps: Array<unknown> | void | null
+) {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+
+  const prevState = hook.memoizedState;
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps = prevState[1];
+      if (areHookInputsEqual(nextDeps as any, prevDeps)) {
+        return prevState[0];
+      }
+    }
+  }
+
+  hook.memoizedState = [callback, nextDeps];
+  return callback;
+}

@@ -78,6 +78,7 @@ export function reconcileChildren(
   returnFiber: Fiber,
   nextChildren: any // 数组、对象、文本
 ): Fiber | null {
+  console.log("%c [  ]-83", "font-size:13px; background:pink; color:#bf2c9f;");
   const newChildren = Array.isArray(nextChildren)
     ? nextChildren
     : [nextChildren];
