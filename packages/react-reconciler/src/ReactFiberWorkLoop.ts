@@ -13,6 +13,7 @@ let workInProgressRoot: FiberRoot | null = null;
 
 export function updateContainer(element: ReactElement, root: FiberRoot) {
   root.current.child = createFiberFromElement(element, root.current);
+  root.current.child.flags = Placement;
   scheduleUpdateOnFiber(root, root.current);
 }
 
@@ -74,10 +75,6 @@ function completeUnitOfWork(unitOfWork: Fiber) {
 }
 
 function commitRoot() {
-  workInProgressRoot.containerInfo.appendChild(
-    workInProgressRoot.current.child.stateNode
-  );
-
   commitMutationEffects(workInProgressRoot.current.child, workInProgressRoot);
 
   workInProgressRoot = null;
@@ -167,7 +164,12 @@ function commitPlacement(finishedWork: Fiber) {
     (finishedWork.tag === HostText || finishedWork.tag === HostComponent)
   ) {
     // 获取父dom节点
-    const parent = parentFiber.stateNode;
+    let parent = parentFiber.stateNode;
+
+    if (parent.containerInfo) {
+      parent = parent.containerInfo;
+    }
+
     // dom节点
     const before = getHostSibling(finishedWork);
     insertOrAppendPlacementNode(finishedWork, before, parent);

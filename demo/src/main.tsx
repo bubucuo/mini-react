@@ -2,15 +2,15 @@ import {ReactDOM, Component, useReducer, useState} from "../which-react";
 
 import "./index.css";
 
-// class ClassComponent extends Component {
-//   render() {
-//     return (
-//       <div className="border">
-//         <h3>{this.props.name}</h3>
-//       </div>
-//     );
-//   }
-// }
+class ClassComponent extends Component {
+  render() {
+    return (
+      <div className="border">
+        <h3>{this.props.name}</h3>
+      </div>
+    );
+  }
+}
 
 function FunctionComponent(props: {name: string}) {
   const [count, setCount] = useReducer((x) => x + 1, 0);
