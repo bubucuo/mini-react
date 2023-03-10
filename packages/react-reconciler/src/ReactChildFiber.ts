@@ -1,7 +1,7 @@
 import {isStr} from "shared/utils";
 import {createFiberFromElement, createFiberFromText} from "./ReactFiber";
 import {Fiber} from "./ReactInternalTypes";
-import {Placement, Update} from "./ReactFiberFlags";
+import {ChildDeletion, Placement, Update} from "./ReactFiberFlags";
 
 function placeChild(
   newFiber: Fiber,
@@ -40,6 +40,8 @@ function deleteChild(returnFiber: Fiber, childToDelete: Fiber) {
     returnFiber.deletions.push(childToDelete);
   } else {
     returnFiber.deletions = [childToDelete];
+    // 删除子节点
+    returnFiber.flags = ChildDeletion;
   }
 }
 
