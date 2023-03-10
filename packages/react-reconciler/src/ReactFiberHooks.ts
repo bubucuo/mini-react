@@ -15,7 +15,7 @@ import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
 
 type Hook = {
-  memorizedState: any; // state
+  memoizedState: any; // state
   next: Hook | null; // 下一个hook
 };
 
@@ -55,7 +55,7 @@ function updateWorkInProgressHook(): Hook {
     // 初次渲染
     currentHook = null;
     hook = {
-      memorizedState: null,
+      memoizedState: null,
       next: null,
     };
 
@@ -74,12 +74,10 @@ export function useReducer(reducer: Function, initialState: any) {
 
   if (!currentlyRenderingFiber.alternate) {
     // 函数组件初次渲染
-    hook.memorizedState = initialState;
+    hook.memoizedState = initialState;
   }
   const dispatch = (action) => {
-    hook.memorizedState = reducer
-      ? reducer(hook.memorizedState, action)
-      : action;
+    hook.memoizedState = reducer ? reducer(hook.memoizedState, action) : action;
 
     const root = getRootForUpdatedFiber(currentlyRenderingFiber);
 
@@ -88,7 +86,7 @@ export function useReducer(reducer: Function, initialState: any) {
     scheduleUpdateOnFiber(root, currentlyRenderingFiber);
   };
 
-  return [hook.memorizedState, dispatch];
+  return [hook.memoizedState, dispatch];
 }
 
 // 根据 sourceFiber 找根节点
@@ -135,7 +133,7 @@ function updateEffectImpl(
 
   if (currentHook) {
     // 检查deps的变化
-    const prevEffect = currentHook.memorizedState;
+    const prevEffect = currentHook.memoizedState;
 
     if (deps) {
       const prevDeps = prevEffect.deps;
@@ -146,7 +144,7 @@ function updateEffectImpl(
   }
 
   currentlyRenderingFiber.flags |= fiberFlags;
-  hook.memorizedState = pushEffect(HookHasEffect | hookFlags, create, nextDeps);
+  hook.memoizedState = pushEffect(HookHasEffect | hookFlags, create, nextDeps);
 }
 
 function pushEffect(
@@ -196,4 +194,27 @@ export function areHookInputsEqual(
     return false;
   }
   return true;
+}
+
+export function useMemo<T>(
+  nextCreate: () => T,
+  deps: Array<unknown> | void | null
+) {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+
+  const prevState = hook.memoizedState;
+  if (prevState !== null) {
+    if (nextDeps !== null) {
+      const prevDeps = prevState[1];
+      if (areHookInputsEqual(nextDeps as any, prevDeps)) {
+        return prevState[0];
+      }
+    }
+  }
+
+  const nextValue = nextCreate();
+
+  hook.memoizedState = [nextValue, nextDeps];
+  return nextValue;
 }

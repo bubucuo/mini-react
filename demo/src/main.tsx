@@ -5,6 +5,7 @@ import {
   useState,
   useLayoutEffect,
   useEffect,
+  useMemo,
 } from "../which-react";
 
 import "./index.css";
@@ -23,23 +24,31 @@ function FunctionComponent(props: {name: string}) {
   const [count, setCount] = useReducer((x) => x + 1, 0);
   const [count2, setCount2] = useState(0);
 
-  useLayoutEffect(() => {
-    console.log(
-      "%c [ useLayoutEffect  ]-34",
-      "font-size:13px; background:pink; color:#bf2c9f;"
-    );
+  const expensive = useMemo(() => {
+    console.log("compute");
+    let sum = 0;
+    for (let i = 0; i < count; i++) {
+      sum += i;
+    }
+    return sum;
+    //只有count变化，这里才重新执行
   }, [count]);
 
-  useEffect(() => {
-    console.log(
-      "%c [ useEffect ]-29",
-      "font-size:13px; background:pink; color:#bf2c9f;"
-    );
-  }, []);
+  // const expensive = () => {
+  //   // 计算非常复杂
+  //   console.log("compute");
+  //   let sum = 0;
+  //   for (let i = 0; i < count; i++) {
+  //     sum += i;
+  //   }
+  //   return sum;
+  //   //只有count变化，这里才重新执行
+  // };
 
   return (
     <div className="border">
       <p>{props.name}</p>
+      <p>{expensive}</p>
       <button onClick={() => setCount()}>{count}</button>
       <button onClick={() => setCount2(count2 + 1)}>{count2}</button>
 
@@ -64,14 +73,6 @@ const jsx = (
     <h1>react</h1>
     <a href="https://github.com/bubucuo/mini-react">mini react</a>
     <FunctionComponent name="函数组件" />
-    {/* <ClassComponent name="类组件" />
-    omg文本
-    <ul>
-      <>
-        <li>节点1</li>
-        <li>节点2</li>
-      </>
-    </ul> */}
   </div>
 );
 
