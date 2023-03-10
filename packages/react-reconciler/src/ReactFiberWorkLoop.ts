@@ -9,9 +9,13 @@ import {
   HostText,
   FunctionComponent,
 } from "./ReactWorkTags";
-import {Placement, Update} from "./ReactFiberFlags";
-import {HookLayout, HookFlags, HookHasEffect} from "./ReactHookEffectTags";
-import {create} from "../../../../../library/react/packages/react-native-renderer/src/ReactNativeAttributePayload";
+import {Placement, Update, Passive} from "./ReactFiberFlags";
+import {
+  HookLayout,
+  HookFlags,
+  // HookHasEffect,
+  HookPassive,
+} from "./ReactHookEffectTags";
 
 // work in progress 正在工作当中的
 // current
@@ -84,6 +88,13 @@ function completeUnitOfWork(unitOfWork: Fiber) {
 function commitRoot() {
   commitMutationEffects(workInProgressRoot.current.child, workInProgressRoot);
 
+  const root = workInProgressRoot.current.child;
+
+  Scheduler.scheduleCallback(NormalPriority, () => {
+    flushPassiveEffect(root);
+    return;
+  });
+
   workInProgressRoot = null;
   workInProgress = null;
 }
@@ -128,7 +139,7 @@ function commitReconciliationEffects(finishedWork: Fiber) {
         break;
 
       case FunctionComponent:
-        commitHookEffects(finishedWork, HookLayout | HookHasEffect);
+        commitHookEffects(finishedWork, HookLayout);
     }
 
     finishedWork.flags &= ~Update;
@@ -162,6 +173,32 @@ function commitHookEffects(finishedWork: Fiber, hookFlags: HookFlags) {
     } while (effect !== firstEffect);
   }
 }
+
+function flushPassiveEffect(finishedWork: Fiber) {
+  recursivelyTraversePassiveMountEffects(finishedWork);
+  commitPassiveMountOnFiber(finishedWork);
+}
+
+function recursivelyTraversePassiveMountEffects(parentFiber: Fiber) {
+  let child = parentFiber.child;
+
+  while (child !== null) {
+    commitPassiveMountOnFiber(child);
+    child = child.sibling;
+  }
+}
+
+function commitPassiveMountOnFiber(finishedWork: Fiber) {
+  switch (finishedWork.tag) {
+    case FunctionComponent:
+      if (finishedWork.flags & Passive) {
+        commitHookEffects(finishedWork, HookPassive);
+      }
+      finishedWork.flags &= ~Passive;
+      break;
+  }
+}
+
 function commitDeletions(deletions: Array<Fiber>, parent: Element) {
   deletions.forEach((deletion) => {
     // 找到deletion的dom节点

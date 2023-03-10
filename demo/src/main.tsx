@@ -35,7 +35,7 @@ function FunctionComponent(props: {name: string}) {
       "%c [ useEffect ]-29",
       "font-size:13px; background:pink; color:#bf2c9f;"
     );
-  }, [count]);
+  }, []);
 
   return (
     <div className="border">
