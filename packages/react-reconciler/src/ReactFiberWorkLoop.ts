@@ -165,7 +165,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 function commitRoot(root: FiberRoot) {
   commitMutationEffectsOnFiber(root.current.child, root);
 
-  const rootChild = workInProgressRoot.current.child;
+  const rootChild = root.current.child;
 
   Scheduler.scheduleCallback(NormalSchedulerPriority, () => {
     flushPassiveEffect(rootChild);
