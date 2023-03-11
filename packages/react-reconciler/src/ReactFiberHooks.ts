@@ -5,6 +5,7 @@ import {
   Passive as PassiveEffect,
   Update as UpdateEffect,
 } from "./ReactFiberFlags";
+import {reactContext} from "./ReactFiberNewContext";
 import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
 import {
   HookFlags,
@@ -254,5 +255,5 @@ export function useCallback<T>(
 }
 
 export function useContext<T>(context: ReactContext<T>): T {
-  return 999;
+  return reactContext(context);
 }

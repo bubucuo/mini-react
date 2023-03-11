@@ -1,6 +1,7 @@
 import {isNum, isStr} from "shared/utils";
 import {reconcileChildren} from "./ReactChildFiber";
 import {renderHooks} from "./ReactFiberHooks";
+import {prepareToReactContext, pushProvider} from "./ReactFiberNewContext";
 import {Fiber} from "./ReactInternalTypes";
 import {
   HostComponent,
@@ -76,6 +77,7 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
 
 // 函数组件
 function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
+  prepareToReactContext(workInProgress);
   renderHooks(workInProgress);
 
   const {type, pendingProps} = workInProgress;
@@ -122,7 +124,7 @@ function updateContextProvider(current: Fiber | null, workInProgress: Fiber) {
   const newValue = workInProgress.pendingProps.value;
 
   // todo 把 newValue 存到第三方
-  // pushProvider(context, newValue);
+  pushProvider(context, newValue);
 
   workInProgress.child = reconcileChildren(
     current,
