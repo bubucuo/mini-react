@@ -8,6 +8,7 @@ import {
   HostComponent,
   HostText,
   ContextProvider,
+  ContextConsumer,
 } from "./ReactWorkTags";
 import {
   IndeterminateComponent,
@@ -15,7 +16,11 @@ import {
   ClassComponent,
   FunctionComponent,
 } from "./ReactWorkTags";
-import {REACT_FRAGMENT_TYPE, REACT_PROVIDER_TYPE} from "shared/ReactSymbols";
+import {
+  REACT_FRAGMENT_TYPE,
+  REACT_PROVIDER_TYPE,
+  REACT_CONTEXT_TYPE,
+} from "shared/ReactSymbols";
 
 // 创建一个fiber
 export function createFiber(
@@ -82,6 +87,7 @@ export function createFiberFromElement(
 ) {
   const {type, key} = element;
   const pendingProps = element.props;
+
   const fiber = createFiberFromTypeAndProps(
     type,
     key,
@@ -114,7 +120,10 @@ export function createFiberFromTypeAndProps(
     fiberTag = Fragment;
   } else if (type.$$typeof === REACT_PROVIDER_TYPE) {
     fiberTag = ContextProvider;
+  } else if (type.$$typeof === REACT_CONTEXT_TYPE) {
+    fiberTag = ContextConsumer;
   }
+
   const fiber = createFiber(fiberTag, pendingProps, key, returnFiber);
   fiber.elementType = type;
   fiber.type = type;

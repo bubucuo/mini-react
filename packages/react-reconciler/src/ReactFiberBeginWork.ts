@@ -1,7 +1,11 @@
 import {isNum, isStr} from "shared/utils";
 import {reconcileChildren} from "./ReactChildFiber";
 import {renderHooks} from "./ReactFiberHooks";
-import {prepareToReactContext, pushProvider} from "./ReactFiberNewContext";
+import {
+  prepareToReadContext,
+  pushProvider,
+  readContext,
+} from "./ReactFiberNewContext";
 import {Fiber} from "./ReactInternalTypes";
 import {
   HostComponent,
@@ -11,6 +15,7 @@ import {
   HostText,
   Fragment,
   ContextProvider,
+  ContextConsumer,
 } from "./ReactWorkTags";
 
 // 1. 处理当前fiber，因为不同组件对应的fiber处理方式不同，
@@ -38,6 +43,9 @@ export function beginWork(current: Fiber | null, workInProgress: Fiber) {
 
     case ContextProvider:
       return updateContextProvider(current, workInProgress);
+
+    case ContextConsumer:
+      return updateContextConsumer(current, workInProgress);
   }
 }
 
@@ -77,7 +85,7 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
 
 // 函数组件
 function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
-  prepareToReactContext(workInProgress);
+  prepareToReadContext(workInProgress);
   renderHooks(workInProgress);
 
   const {type, pendingProps} = workInProgress;
@@ -130,6 +138,26 @@ function updateContextProvider(current: Fiber | null, workInProgress: Fiber) {
     current,
     workInProgress,
     workInProgress.pendingProps.children
+  );
+  return workInProgress.child;
+}
+
+function updateContextConsumer(current: Fiber | null, workInProgress: Fiber) {
+  const context = workInProgress.type;
+
+  prepareToReadContext(workInProgress);
+
+  const newValue = readContext(context);
+
+  const render = workInProgress.pendingProps.children;
+  const newChildren = render(newValue);
+
+  pushProvider(context, newValue);
+
+  workInProgress.child = reconcileChildren(
+    current,
+    workInProgress,
+    newChildren
   );
   return workInProgress.child;
 }

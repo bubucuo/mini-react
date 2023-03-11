@@ -14,5 +14,8 @@ export function createContext<T>(defaultValue: T): ReactContext<T> {
     $$typeof: REACT_PROVIDER_TYPE,
     _context: context,
   };
+
+  context.Consumer = context;
+
   return context;
 }

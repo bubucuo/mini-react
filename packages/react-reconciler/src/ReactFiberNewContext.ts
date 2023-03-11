@@ -18,7 +18,7 @@ export function pushProvider<T>(context: ReactContext<T>, nextValue: T): void {
   context._currentValue = nextValue;
 }
 
-export function prepareToReactContext(workInProgress: Fiber) {
+export function prepareToReadContext(workInProgress: Fiber) {
   currentlyRenderingFiber = workInProgress;
   lastContextDependency = null;
   const dependencies = workInProgress.dependencies;
@@ -31,7 +31,7 @@ export function prepareToReactContext(workInProgress: Fiber) {
 }
 
 // get
-export function reactContext<T>(context: ReactContext<T>): T {
+export function readContext<T>(context: ReactContext<T>): T {
   const value = context._currentValue;
 
   const contextItem = {

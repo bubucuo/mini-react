@@ -35,7 +35,13 @@ function FunctionComponent(props: {name: string}) {
 
 function Child() {
   const count = useContext(CountContext);
-  return <div className="border">{count}</div>;
+  return (
+    <div className="border">
+      <h1>{count}</h1>
+
+      <CountContext.Consumer>{(ctx) => <h1>{ctx}</h1>}</CountContext.Consumer>
+    </div>
+  );
 }
 
 const jsx = (
