@@ -1,6 +1,7 @@
 import {isNum, isStr} from "shared/utils";
 import {reconcileChildren} from "./ReactChildFiber";
 import {renderHooks} from "./ReactFiberHooks";
+import {prepareToReadContext, pushProvider} from "./ReactFiberNewContext";
 import {Fiber} from "./ReactInternalTypes";
 import {
   HostComponent,
