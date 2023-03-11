@@ -1,7 +1,6 @@
 import {isNum, isStr} from "shared/utils";
 import {reconcileChildren} from "./ReactChildFiber";
 import {renderHooks} from "./ReactFiberHooks";
-import {prepareToReadContext, pushProvider} from "./ReactFiberNewContext";
 import {Fiber} from "./ReactInternalTypes";
 import {
   HostComponent,
@@ -15,13 +14,6 @@ import {
 // 1. 处理当前fiber，因为不同组件对应的fiber处理方式不同，
 // 2. 返回子节点
 export function beginWork(current: Fiber | null, workInProgress: Fiber) {
-  console.log(
-    "%c [  ]-19",
-    "font-size:13px; background:pink; color:#bf2c9f;",
-    current.pendingProps,
-    workInProgress.pendingProps
-  );
-
   switch (workInProgress.tag) {
     case HostRoot:
       return updateHostRoot(current, workInProgress);
@@ -80,12 +72,13 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
 
 // 函数组件
 function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
-  console.log("%c [  ]-84", "font-size:13px; background:pink; color:#bf2c9f;");
   renderHooks(workInProgress);
+
   const {type, pendingProps} = workInProgress;
   const children = type(pendingProps);
 
   workInProgress.child = reconcileChildren(current, workInProgress, children);
+
   return workInProgress.child;
 }
 
