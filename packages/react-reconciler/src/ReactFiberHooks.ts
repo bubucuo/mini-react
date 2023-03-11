@@ -1,3 +1,4 @@
+import {ReactContext} from "shared/ReactTypes";
 import {isFn} from "shared/utils";
 import {
   Flags,
@@ -76,17 +77,29 @@ export function useReducer(reducer: Function, initialState: any) {
     // 函数组件初次渲染
     hook.memoizedState = initialState;
   }
-  const dispatch = (action) => {
-    hook.memoizedState = reducer ? reducer(hook.memoizedState, action) : action;
-
-    const root = getRootForUpdatedFiber(currentlyRenderingFiber);
-
-    currentlyRenderingFiber.alternate = {...currentlyRenderingFiber};
-
-    scheduleUpdateOnFiber(root, currentlyRenderingFiber);
-  };
+  const dispatch = dispatchReducerAction.bind(
+    null,
+    currentlyRenderingFiber,
+    hook,
+    reducer
+  );
 
   return [hook.memoizedState, dispatch];
+}
+
+function dispatchReducerAction(
+  fiber: Fiber,
+  hook: Hook,
+  reducer: Function,
+  action: any
+) {
+  hook.memoizedState = reducer ? reducer(hook.memoizedState, action) : action;
+
+  const root = getRootForUpdatedFiber(fiber);
+
+  fiber.alternate = {...fiber};
+
+  scheduleUpdateOnFiber(root, fiber);
 }
 
 // 根据 sourceFiber 找根节点
@@ -238,4 +251,8 @@ export function useCallback<T>(
 
   hook.memoizedState = [callback, nextDeps];
   return callback;
+}
+
+export function useContext<T>(context: ReactContext<T>): T {
+  return 999;
 }
