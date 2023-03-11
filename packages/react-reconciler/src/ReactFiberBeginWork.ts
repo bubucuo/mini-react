@@ -3,6 +3,7 @@ import {Placement} from "./ReactFiberFlags";
 import {Fiber} from "./ReactInternalTypes";
 import {
   ClassComponent,
+  ContextConsumer,
   Fragment,
   FunctionComponent,
   HostComponent,
@@ -12,6 +13,12 @@ import {
 import {isStr, isNum} from "../../shared/utils";
 import {renderHooks} from "./ReactFiberHooks";
 import {reconcileChildren} from "./ReactChildFiber";
+import {ContextProvider} from "./ReactWorkTags";
+import {
+  prepareToReadContext,
+  pushProvider,
+  readContext,
+} from "./ReactFiberNewContext";
 
 export function beginWork(
   current: Fiber | null,
@@ -38,6 +45,12 @@ export function beginWork(
     // Fragment
     case Fragment:
       return updateFragment(current, workInProgress);
+
+    case ContextProvider:
+      return updateContextProvider(current, workInProgress);
+
+    case ContextConsumer:
+      return updateContextConsumer(current, workInProgress);
   }
 }
 
@@ -88,6 +101,7 @@ function updateFunctionComponent(
   current: Fiber | null,
   workInProgress: Fiber
 ): Fiber | null {
+  prepareToReadContext(workInProgress);
   renderHooks(workInProgress);
   const {type, pendingProps} = workInProgress;
 
@@ -103,9 +117,12 @@ function updateClassComponent(
   current: Fiber | null,
   workInProgress: Fiber
 ): Fiber | null {
-  const {type, pendingProps} = workInProgress;
+  prepareToReadContext(workInProgress);
 
+  const {type, pendingProps} = workInProgress;
+  const context = type.contextType;
   const instance = new type(pendingProps);
+  instance.context = readContext(context);
   workInProgress.stateNode = instance;
 
   const children = instance.render();
@@ -142,49 +159,41 @@ function updateFragment(
   return workInProgress.child;
 }
 
-// 协调子节点
-// 返回 child ,第一个子fiber
-// diff
-// 只适合初次渲染
-function _reconcileChildren(
+function updateContextProvider(
   current: Fiber | null,
-  workInProgress: Fiber,
-  nextChildren: any // 对象、数组、字符串
-) {
-  const newChildren = Array.isArray(nextChildren)
-    ? nextChildren
-    : [nextChildren];
+  workInProgress: Fiber
+): Fiber | null {
+  // set context value
+  // 接收属性值 value ，并且要把它存起来
+  const context = workInProgress.type._context;
+  const newValue = workInProgress.pendingProps.value;
+  pushProvider(context, newValue);
 
-  let newIndex = 0;
-  let resultingFirstChild = null;
-  let previousNewFiber = null;
-  for (; newIndex < newChildren.length; newIndex++) {
-    const newChild = newChildren[newIndex];
-    if (newChild === null) {
-      continue;
-    }
+  workInProgress.child = reconcileChildren(
+    current,
+    workInProgress,
+    workInProgress.pendingProps.children
+  );
+  return workInProgress.child;
+}
 
-    let newFiber: Fiber;
+function updateContextConsumer(current: Fiber | null, workInProgress: Fiber) {
+  const context = workInProgress.type;
+  const newProps = workInProgress.pendingProps;
+  const render = newProps.children;
 
-    if (isStr(newChild)) {
-      newFiber = createFiberFromText(newChild, workInProgress);
-    } else {
-      newFiber = createFiberFromElement(newChild, workInProgress);
-    }
-    // todo 初次更新
-    newFiber.flags = Placement;
+  prepareToReadContext(workInProgress);
 
-    if (previousNewFiber === null) {
-      // newFiber 是第0个fiber
-      resultingFirstChild = newFiber;
-    } else {
-      previousNewFiber.sibling = newFiber;
-    }
+  const newValue = readContext(context);
 
-    previousNewFiber = newFiber;
-  }
+  const newChildren = render(newValue);
 
-  return resultingFirstChild;
+  workInProgress.child = reconcileChildren(
+    current,
+    workInProgress,
+    newChildren
+  );
+  return workInProgress.child;
 }
 
 function shouldSetTextContent(type: string, props: any): boolean {

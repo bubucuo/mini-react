@@ -1,6 +1,7 @@
 import type {WorkTag} from "./ReactWorkTags";
 import type {Flags} from "./ReactFiberFlags";
 import {Lane, LaneMap, Lanes} from "./ReactFiberLane";
+import {ReactContext} from "shared/ReactTypes";
 
 export type Fiber = {
   // 标记组件类型
@@ -55,6 +56,20 @@ export type Fiber = {
 
   // 用于 diff 阶段
   alternate: Fiber | null;
+
+  // context
+  dependencies: Dependencies | null;
+};
+
+export type ContextDependency<T> = {
+  context: ReactContext<T>;
+  next: ContextDependency<unknown> | null;
+  memoizedValue: T;
+};
+
+export type Dependencies = {
+  // lanes: Lanes;
+  firstContext: ContextDependency<unknown> | null;
 };
 
 export type Container =

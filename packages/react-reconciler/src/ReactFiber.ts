@@ -3,15 +3,25 @@ import {isFn} from "shared/utils";
 import {NoFlags} from "./ReactFiberFlags";
 import {Fiber} from "./ReactInternalTypes";
 import {isStr} from "../../shared/utils";
-import {Fragment, HostComponent, HostText} from "./ReactWorkTags";
+import {
+  ContextProvider,
+  Fragment,
+  HostComponent,
+  HostText,
+} from "./ReactWorkTags";
 import {
   IndeterminateComponent,
   WorkTag,
   ClassComponent,
   FunctionComponent,
 } from "./ReactWorkTags";
-import {REACT_FRAGMENT_TYPE} from "shared/ReactSymbols";
+import {
+  REACT_CONTEXT_TYPE,
+  REACT_FRAGMENT_TYPE,
+  REACT_PROVIDER_TYPE,
+} from "shared/ReactSymbols";
 import {NoLanes} from "./ReactFiberLane";
+import {ContextConsumer} from "./ReactWorkTags";
 
 // 创建一个fiber
 export function createFiber(
@@ -69,6 +79,8 @@ function FiberNode(
 
   // 缓存fiber
   this.alternate = null;
+
+  this.dependencies = null;
 }
 
 // 根据 ReactElement 创建Fiber
@@ -95,6 +107,7 @@ export function createFiberFromTypeAndProps(
   returnFiber: Fiber
 ) {
   let fiberTag: WorkTag = IndeterminateComponent;
+
   if (isFn(type)) {
     // 判断函数组件还是类组件
     if (shouldConstruct(type)) {
@@ -107,8 +120,11 @@ export function createFiberFromTypeAndProps(
     fiberTag = HostComponent;
   } else if (type === REACT_FRAGMENT_TYPE) {
     fiberTag = Fragment;
+  } else if (type.$$typeof === REACT_PROVIDER_TYPE) {
+    fiberTag = ContextProvider;
+  } else if (type.$$typeof === REACT_CONTEXT_TYPE) {
+    fiberTag = ContextConsumer;
   }
-
   const fiber = createFiber(fiberTag, pendingProps, key, returnFiber);
   fiber.elementType = type;
   fiber.type = type;
