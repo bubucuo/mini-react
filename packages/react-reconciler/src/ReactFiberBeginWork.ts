@@ -98,8 +98,14 @@ function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
 
 // 类组件
 function updateClassComponent(current: Fiber | null, workInProgress: Fiber) {
+  prepareToReadContext(workInProgress);
+
+  const context = workInProgress.type.contextType;
+  const newValue = readContext(context);
+
   const {type, pendingProps} = workInProgress;
   const instance = new type(pendingProps);
+  instance.context = newValue;
   workInProgress.stateNode = instance;
 
   const children = instance.render();
