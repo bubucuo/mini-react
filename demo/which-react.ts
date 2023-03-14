@@ -1,11 +1,11 @@
-import React, {
-  useReducer,
-  useState,
-  Component,
-  useEffect,
-  useLayoutEffect,
-} from "react";
-import ReactDOM from "react-dom/client";
+// import React, {
+//   useReducer,
+//   useState,
+//   Component,
+//   useEffect,
+//   useLayoutEffect,
+// } from "react";
+// import ReactDOM from "react-dom/client";
 
 // import {
 //   Component,
@@ -14,6 +14,6 @@ import ReactDOM from "react-dom/client";
 //   useEffect,
 //   useLayoutEffect,
 // } from "../packages/react/src";
-// import ReactDOM from "../packages/react-dom/src/client";
+import ReactDOM from "../packages/react-dom/src/client";
 
-export {ReactDOM, Component, useReducer, useState, useEffect, useLayoutEffect};
+export {ReactDOM};
