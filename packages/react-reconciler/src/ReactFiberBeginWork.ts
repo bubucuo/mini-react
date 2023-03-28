@@ -149,15 +149,14 @@ function updateContextProvider(current: Fiber | null, workInProgress: Fiber) {
 }
 
 function updateContextConsumer(current: Fiber | null, workInProgress: Fiber) {
-  const context = workInProgress.type;
   prepareToReadContext(workInProgress);
 
+  const context = workInProgress.type;
   const newValue = readContext(context);
+
   const render = workInProgress.pendingProps.children;
+
   const newChildren = render(newValue);
-
-  pushProvider(context, newValue);
-
   workInProgress.child = reconcileChildren(
     current,
     workInProgress,
