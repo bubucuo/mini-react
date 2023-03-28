@@ -12,17 +12,21 @@ import {
 
 import "./index.css";
 
-class ClassComponent extends PureComponent {
-  render() {
-    console.log("ClassComponent render");
-    return (
-      <div className="border">
-        <h3>{this.props.name}</h3>
-        <button onClick={() => console.log(this.props.addClick())}>add</button>
-      </div>
-    );
-  }
-}
+// class ClassComponent extends PureComponent {
+// class ClassComponent extends Component {
+//   shouldComponentUpdate(nextProps) {
+//     return nextProps.addClick !== this.props.addClick;
+//   }
+//   render() {
+//     console.log("ClassComponent render");
+//     return (
+//       <div className="border">
+//         <h3>{this.props.name}</h3>
+//         <button onClick={() => console.log(this.props.addClick())}>add</button>
+//       </div>
+//     );
+//   }
+// }
 
 function FunctionComponent(props: {name: string}) {
   const [count, setCount] = useReducer((x) => x + 1, 0);
@@ -36,13 +40,12 @@ function FunctionComponent(props: {name: string}) {
     return sum;
   }, [count]);
 
-  // const addClick = () => {
-  //   let sum = 0;
-  //   for (let i = 0; i < count; i++) {
-  //     sum += i;
-  //   }
-  //   return sum;
-  // };
+  useEffect(() => {
+    console.log(
+      "%c [  ]-46",
+      "font-size:13px; background:pink; color:#bf2c9f;"
+    );
+  }, [addClick]);
 
   return (
     <div className="border">
@@ -50,7 +53,7 @@ function FunctionComponent(props: {name: string}) {
       <button onClick={() => setCount()}>{count}</button>
       <button onClick={() => setCount2(count2 + 1)}>{count2}</button>
 
-      <ClassComponent name="类组件" addClick={addClick} />
+      {/* <ClassComponent name="类组件" addClick={addClick} /> */}
 
       {count % 2 ? <div>omg</div> : <span>123</span>}
 

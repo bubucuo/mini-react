@@ -222,11 +222,11 @@ export function useMemo<T>(
 export function useCallback<T>(
   callback: T,
   deps: Array<unknown> | void | null
-) {
+): T {
   const hook = updateWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
-
   const prevState = hook.memoizedState;
+
   if (prevState !== null) {
     if (nextDeps !== null) {
       const prevDeps = prevState[1];
