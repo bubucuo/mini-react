@@ -28,6 +28,7 @@ function FunctionComponent(props: {name: string}) {
       <CountContext.Provider value={999}>
         <CountContext.Provider value={count}>
           <Child />
+          <ClassComponent name="类组件" />
         </CountContext.Provider>
       </CountContext.Provider>
     </div>
@@ -36,7 +37,26 @@ function FunctionComponent(props: {name: string}) {
 
 function Child() {
   const count = useContext(CountContext);
-  return <div className="border">{count}</div>;
+  return (
+    <div className="border">
+      <h1>{count}</h1>
+
+      <CountContext.Consumer>{(ctx) => <h1>{ctx}</h1>}</CountContext.Consumer>
+    </div>
+  );
+}
+
+class ClassComponent extends Component {
+  static contextType = CountContext;
+  render() {
+    console.log("ClassComponent render");
+    return (
+      <div className="border">
+        <h3>{this.props.name}</h3>
+        <p>{this.context}</p>
+      </div>
+    );
+  }
 }
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
