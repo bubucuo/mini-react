@@ -9,87 +9,36 @@ import {
   useMemo,
   useCallback,
   useRef,
+  createContext,
+  useContext,
 } from "../which-react";
 
 import "./index.css";
 
-// class ClassComponent extends PureComponent {
-// class ClassComponent extends Component {
-//   shouldComponentUpdate(nextProps) {
-//     return nextProps.addClick !== this.props.addClick;
-//   }
-//   render() {
-//     console.log("ClassComponent render");
-//     return (
-//       <div className="border">
-//         <h3>{this.props.name}</h3>
-//         <button onClick={() => console.log(this.props.addClick())}>add</button>
-//       </div>
-//     );
-//   }
-// }
+const CountContext = createContext();
 
 function FunctionComponent(props: {name: string}) {
   const [count, setCount] = useReducer((x) => x + 1, 0);
-  const [count2, setCount2] = useState(0);
-
-  const addClick = useCallback(() => {
-    let sum = 0;
-    for (let i = 0; i < count; i++) {
-      sum += i;
-    }
-    return sum;
-  }, [count]);
-
-  useEffect(() => {
-    console.log(
-      "%c [  ]-46",
-      "font-size:13px; background:pink; color:#bf2c9f;"
-    );
-  }, [addClick]);
 
   return (
     <div className="border">
       <p>{props.name}</p>
       <button onClick={() => setCount()}>{count}</button>
-      <button onClick={() => setCount2(count2 + 1)}>{count2}</button>
 
-      {/* <ClassComponent name="类组件" addClick={addClick} /> */}
-
-      {count % 2 ? <div>omg</div> : <span>123</span>}
-
-      <ul>
-        {/* <li>随着count2的奇偶性变化</li> */}
-        {count % 2 === 0
-          ? [2, 1, 3, 4].map((item) => {
-              return <li key={item}>{item}</li>;
-            })
-          : [0, 1, 2, 3, 4].map((item) => {
-              return <li key={item}>{item}</li>;
-            })}
-      </ul>
+      <CountContext.Provider value={999}>
+        <CountContext.Provider value={count}>
+          <Child />
+        </CountContext.Provider>
+      </CountContext.Provider>
     </div>
   );
 }
 
-function Counter() {
-  let ref = useRef(0);
-
-  function handleClick() {
-    ref.current = ref.current + 1;
-    console.log("You clicked " + ref.current + " times!"); //sy-log
-  }
-
-  return <button onClick={handleClick}>Click me!</button>;
+function Child() {
+  const count = useContext(CountContext);
+  return <div className="border">{count}</div>;
 }
 
-const jsx = (
-  <div className="border">
-    <h1>react</h1>
-    <a href="https://github.com/bubucuo/mini-react">mini react</a>
-    <FunctionComponent name="函数组件" />
-    <Counter />
-  </div>
+ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+  <FunctionComponent name="函数组件" />
 );
-
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(jsx);
