@@ -1,13 +1,14 @@
 import {
   ReactDOM,
   Component,
+  PureComponent,
   useReducer,
   useState,
   useLayoutEffect,
   useEffect,
   useMemo,
   useCallback,
-  PureComponent,
+  useRef,
 } from "../which-react";
 
 import "./index.css";
@@ -71,11 +72,23 @@ function FunctionComponent(props: {name: string}) {
   );
 }
 
+function Counter() {
+  let ref = useRef(0);
+
+  function handleClick() {
+    ref.current = ref.current + 1;
+    console.log("You clicked " + ref.current + " times!"); //sy-log
+  }
+
+  return <button onClick={handleClick}>Click me!</button>;
+}
+
 const jsx = (
   <div className="border">
     <h1>react</h1>
     <a href="https://github.com/bubucuo/mini-react">mini react</a>
     <FunctionComponent name="函数组件" />
+    <Counter />
   </div>
 );
 

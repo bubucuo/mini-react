@@ -239,3 +239,14 @@ export function useCallback<T>(
   hook.memoizedState = [callback, nextDeps];
   return callback;
 }
+
+export function useRef<T>(initialValue: T): {current: T} {
+  const hook = updateWorkInProgressHook();
+
+  if (!currentHook) {
+    const ref = {current: initialValue};
+    hook.memoizedState = ref;
+  }
+
+  return hook.memoizedState;
+}
