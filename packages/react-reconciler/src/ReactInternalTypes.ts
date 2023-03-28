@@ -1,5 +1,6 @@
 import type {WorkTag} from "./ReactWorkTags";
 import type {Flags} from "./ReactFiberFlags";
+import {ReactContext} from "shared/ReactTypes";
 
 export type Fiber = {
   // 标记组件类型
@@ -54,6 +55,9 @@ export type Fiber = {
 
   // 用于 diff 阶段
   alternate: Fiber | null;
+
+  // context
+  dependencies: Dependencies | null; // 单链表结构存储
 };
 
 export type Container =
@@ -70,4 +74,15 @@ export type FiberRoot = {
 
   // Scheduler.scheduleCallback 返回的节点，记录下一个任务
   callbackNode: any;
+};
+
+export type ContextDependency<T> = {
+  context: ReactContext<T>;
+  next: ContextDependency<unknown> | null;
+  memoizedValue: T;
+};
+
+export type Dependencies = {
+  // lanes: Lanes,
+  firstContext: ContextDependency<unknown> | null;
 };

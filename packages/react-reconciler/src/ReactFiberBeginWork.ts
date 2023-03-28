@@ -2,6 +2,7 @@ import {isNum, isStr} from "shared/utils";
 import {reconcileChildren} from "./ReactChildFiber";
 import {renderHooks} from "./ReactFiberHooks";
 import {Fiber} from "./ReactInternalTypes";
+import {prepareToReadContext, pushProvider} from "./ReactNewContext";
 import {
   HostComponent,
   HostRoot,
@@ -77,6 +78,7 @@ function updateHostComponent(current: Fiber | null, workInProgress: Fiber) {
 // 函数组件
 function updateFunctionComponent(current: Fiber | null, workInProgress: Fiber) {
   renderHooks(workInProgress);
+  prepareToReadContext(workInProgress);
   const {type, pendingProps} = workInProgress;
   const children = type(pendingProps);
 
@@ -118,11 +120,8 @@ function updateFragment(current: Fiber | null, workInProgress: Fiber) {
 function updateContextProvider(current: Fiber | null, workInProgress: Fiber) {
   const context = workInProgress.type._context;
   const newValue = workInProgress.pendingProps.value;
-  console.log(
-    "%c [  ]-121",
-    "font-size:13px; background:pink; color:#bf2c9f;",
-    workInProgress
-  );
+
+  pushProvider(context, newValue);
 
   // context newvalue，存储
   workInProgress.child = reconcileChildren(

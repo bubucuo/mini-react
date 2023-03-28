@@ -70,6 +70,9 @@ function FiberNode(
 
   // 缓存fiber
   this.alternate = null;
+
+  // Context
+  this.dependencies = null;
 }
 
 // 根据 ReactElement 创建Fiber

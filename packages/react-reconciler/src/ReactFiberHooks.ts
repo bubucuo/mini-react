@@ -14,6 +14,7 @@ import {
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
 import {ReactContext} from "../../shared/ReactTypes";
+import {readContext} from "./ReactNewContext";
 
 type Hook = {
   memoizedState: any; // state
@@ -77,17 +78,29 @@ export function useReducer(reducer: Function, initialState: any) {
     // 函数组件初次渲染
     hook.memoizedState = initialState;
   }
-  const dispatch = (action) => {
-    hook.memoizedState = reducer ? reducer(hook.memoizedState, action) : action;
-
-    const root = getRootForUpdatedFiber(currentlyRenderingFiber);
-
-    currentlyRenderingFiber.alternate = {...currentlyRenderingFiber};
-
-    scheduleUpdateOnFiber(root, currentlyRenderingFiber);
-  };
+  const dispatch = dispatchReducerAction.bind(
+    null,
+    currentlyRenderingFiber,
+    hook,
+    reducer
+  );
 
   return [hook.memoizedState, dispatch];
+}
+
+function dispatchReducerAction(
+  fiber: Fiber,
+  hook: Hook,
+  reducer: Function,
+  action: any
+) {
+  hook.memoizedState = reducer ? reducer(hook.memoizedState, action) : action;
+
+  const root = getRootForUpdatedFiber(fiber);
+
+  fiber.alternate = {...fiber};
+
+  scheduleUpdateOnFiber(root, fiber);
 }
 
 // 根据 sourceFiber 找根节点
@@ -252,6 +265,6 @@ export function useRef<T>(initialValue: T): {current: T} {
   return hook.memoizedState;
 }
 
-export function useContext(context: ReactContext<T>): T {
-  return 99;
+export function useContext<T>(context: ReactContext<T>): T {
+  return readContext(context);
 }
