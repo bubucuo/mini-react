@@ -13,6 +13,7 @@ import {
 } from "./ReactHookEffectTags";
 import {Fiber, FiberRoot} from "./ReactInternalTypes";
 import {HostRoot} from "./ReactWorkTags";
+import {ReactContext} from "../../shared/ReactTypes";
 
 type Hook = {
   memoizedState: any; // state
@@ -249,4 +250,8 @@ export function useRef<T>(initialValue: T): {current: T} {
   }
 
   return hook.memoizedState;
+}
+
+export function useContext(context: ReactContext<T>): T {
+  return 99;
 }

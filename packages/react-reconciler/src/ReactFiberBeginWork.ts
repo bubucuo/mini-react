@@ -9,6 +9,7 @@ import {
   ClassComponent,
   HostText,
   Fragment,
+  ContextProvider,
 } from "./ReactWorkTags";
 
 // 1. 处理当前fiber，因为不同组件对应的fiber处理方式不同，
@@ -33,6 +34,9 @@ export function beginWork(current: Fiber | null, workInProgress: Fiber) {
     // 文本节点
     case Fragment:
       return updateFragment(current, workInProgress);
+
+    case ContextProvider:
+      return updateContextProvider(current, workInProgress);
   }
 }
 
@@ -108,6 +112,25 @@ function updateFragment(current: Fiber | null, workInProgress: Fiber) {
     workInProgress,
     workInProgress.pendingProps.children
   );
+  return workInProgress.child;
+}
+
+function updateContextProvider(current: Fiber | null, workInProgress: Fiber) {
+  const context = workInProgress.type._context;
+  const newValue = workInProgress.pendingProps.value;
+  console.log(
+    "%c [  ]-121",
+    "font-size:13px; background:pink; color:#bf2c9f;",
+    workInProgress
+  );
+
+  // context newvalue，存储
+  workInProgress.child = reconcileChildren(
+    current,
+    workInProgress,
+    workInProgress.pendingProps.children
+  );
+
   return workInProgress.child;
 }
 

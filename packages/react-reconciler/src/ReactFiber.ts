@@ -3,14 +3,19 @@ import {isFn} from "shared/utils";
 import {NoFlags} from "./ReactFiberFlags";
 import {Fiber} from "./ReactInternalTypes";
 import {isStr} from "../../shared/utils";
-import {Fragment, HostComponent, HostText} from "./ReactWorkTags";
+import {
+  ContextProvider,
+  Fragment,
+  HostComponent,
+  HostText,
+} from "./ReactWorkTags";
 import {
   IndeterminateComponent,
   WorkTag,
   ClassComponent,
   FunctionComponent,
 } from "./ReactWorkTags";
-import {REACT_FRAGMENT_TYPE} from "shared/ReactSymbols";
+import {REACT_FRAGMENT_TYPE, REACT_PROVIDER_TYPE} from "shared/ReactSymbols";
 
 // 创建一个fiber
 export function createFiber(
@@ -103,6 +108,8 @@ export function createFiberFromTypeAndProps(
     fiberTag = HostComponent;
   } else if (type === REACT_FRAGMENT_TYPE) {
     fiberTag = Fragment;
+  } else if (type.$$typeof === REACT_PROVIDER_TYPE) {
+    fiberTag = ContextProvider;
   }
 
   const fiber = createFiber(fiberTag, pendingProps, key, returnFiber);
