@@ -17,6 +17,13 @@ import "./index.css";
 
 const CountContext = createContext();
 
+// stack
+// leetcode 括号匹配
+// 受限的数据结构
+// push 只能在栈尾
+// pop 只能在栈尾
+// read 只能在栈尾
+
 function FunctionComponent(props: {name: string}) {
   const [count, setCount] = useReducer((x) => x + 1, 0);
 
@@ -27,18 +34,21 @@ function FunctionComponent(props: {name: string}) {
 
       <CountContext.Provider value={999}>
         <CountContext.Provider value={count}>
-          <Child />
+          <Child tips="one" />
           <ClassComponent name="类组件" />
         </CountContext.Provider>
+
+        <Child tips="two" />
       </CountContext.Provider>
     </div>
   );
 }
 
-function Child() {
+function Child({tips}) {
   const count = useContext(CountContext);
   return (
     <div className="border">
+      <h1>Child {tips}</h1>
       <h1>{count}</h1>
 
       <CountContext.Consumer>{(ctx) => <h1>{ctx}</h1>}</CountContext.Consumer>
