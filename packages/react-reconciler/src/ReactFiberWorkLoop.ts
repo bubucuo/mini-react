@@ -173,7 +173,7 @@ function commitHookEffects(finishedWork: Fiber, hookFlags: HookFlags) {
     do {
       if ((effect.tag & hookFlags) === hookFlags) {
         const create = effect.create;
-        effect.destory = create();
+        effect.destroy = create();
       }
       effect = effect.next;
     } while (effect !== firstEffect);
