@@ -4,9 +4,9 @@
   "description": "",
   "main": "index.ts",
   "dependencies": {
-    "shared": "workspace:*",
-    "react-reconciler": "workspace:*",
-    "scheduler": "workspace:*"
+    "shared": "*",
+    "react-reconciler": "*",
+    "scheduler": "*"
   },
   "keywords": [],
   "author": "",

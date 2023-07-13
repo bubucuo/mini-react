@@ -6,7 +6,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "react-reconciler": "workspace:*"
+    "react-reconciler": "*"
   },
   "keywords": [],
   "author": "",

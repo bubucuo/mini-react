@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.ts",
   "dependencies": {
-    "shared": "workspace:*",
-    "react-reconciler": "workspace:*"
+    "shared": "*",
+    "react-reconciler": "*"
   },
   "keywords": [],
   "author": "",

@@ -2,11 +2,15 @@
   "name": "mini-react",
   "version": "2.0.0",
   "description": "master react",
+  "private":true,
+  "workspaces": [
+    "packages/*"
+  ],
   "jest": {
     "testRegex": "/scripts/jest/dont-run-jest-directly\\.js$"
   },
   "scripts": {
-    "preinstall": "node ./scripts/preinstall.js",
+ 
     "test": "vitest"
   },
   "keywords": [],
