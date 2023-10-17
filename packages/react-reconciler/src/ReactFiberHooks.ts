@@ -1,20 +1,20 @@
-import {isFn} from "shared/utils";
+import { isFn } from "shared/utils";
 import {
   Flags,
   Passive as PassiveEffect,
   Update as UpdateEffect,
 } from "./ReactFiberFlags";
-import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
+import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
 import {
   HookFlags,
   HookHasEffect,
   HookLayout,
   HookPassive,
 } from "./ReactHookEffectTags";
-import {Fiber, FiberRoot} from "./ReactInternalTypes";
-import {HostRoot} from "./ReactWorkTags";
-import {ReactContext} from "../../shared/ReactTypes";
-import {readContext} from "./ReactNewContext";
+import { Fiber, FiberRoot } from "./ReactInternalTypes";
+import { HostRoot } from "./ReactWorkTags";
+import { ReactContext } from "../../shared/ReactTypes";
+import { readContext } from "./ReactNewContext";
 
 type Hook = {
   memoizedState: any; // state
@@ -98,7 +98,10 @@ function dispatchReducerAction(
 
   const root = getRootForUpdatedFiber(fiber);
 
-  fiber.alternate = {...fiber};
+  fiber.alternate = { ...fiber };
+  if (fiber.sibling) {
+    fiber.sibling.alternate = fiber.sibling;
+  }
 
   scheduleUpdateOnFiber(root, fiber);
 }
@@ -178,7 +181,7 @@ function pushEffect(
 
   if (componentUpdateQueue === null) {
     // 第一个effect
-    componentUpdateQueue = {lastEffect: null};
+    componentUpdateQueue = { lastEffect: null };
     currentlyRenderingFiber.updateQueue = componentUpdateQueue;
     componentUpdateQueue.lastEffect = effect.next = effect;
   } else {
@@ -254,11 +257,11 @@ export function useCallback<T>(
   return callback;
 }
 
-export function useRef<T>(initialValue: T): {current: T} {
+export function useRef<T>(initialValue: T): { current: T } {
   const hook = updateWorkInProgressHook();
 
   if (!currentHook) {
-    const ref = {current: initialValue};
+    const ref = { current: initialValue };
     hook.memoizedState = ref;
   }
 
