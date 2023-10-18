@@ -1,20 +1,20 @@
-import {ReactContext} from "shared/ReactTypes";
-import {isFn} from "shared/utils";
+import { isFn } from "shared/utils";
 import {
   Flags,
   Passive as PassiveEffect,
   Update as UpdateEffect,
 } from "./ReactFiberFlags";
-import {readContext} from "./ReactFiberNewContext";
-import {scheduleUpdateOnFiber} from "./ReactFiberWorkLoop";
+import { scheduleUpdateOnFiber } from "./ReactFiberWorkLoop";
 import {
   HookFlags,
   HookHasEffect,
   HookLayout,
   HookPassive,
 } from "./ReactHookEffectTags";
-import {Fiber, FiberRoot} from "./ReactInternalTypes";
-import {HostRoot} from "./ReactWorkTags";
+import { Fiber, FiberRoot } from "./ReactInternalTypes";
+import { HostRoot } from "./ReactWorkTags";
+import { ReactContext } from "../../shared/ReactTypes";
+import { readContext } from "./ReactNewContext";
 
 type Hook = {
   memoizedState: any; // state
@@ -98,7 +98,10 @@ function dispatchReducerAction(
 
   const root = getRootForUpdatedFiber(fiber);
 
-  fiber.alternate = {...fiber};
+  fiber.alternate = { ...fiber };
+  if (fiber.sibling) {
+    fiber.sibling.alternate = fiber.sibling;
+  }
 
   scheduleUpdateOnFiber(root, fiber);
 }
@@ -178,7 +181,7 @@ function pushEffect(
 
   if (componentUpdateQueue === null) {
     // 第一个effect
-    componentUpdateQueue = {lastEffect: null};
+    componentUpdateQueue = { lastEffect: null };
     currentlyRenderingFiber.updateQueue = componentUpdateQueue;
     componentUpdateQueue.lastEffect = effect.next = effect;
   } else {
@@ -236,11 +239,11 @@ export function useMemo<T>(
 export function useCallback<T>(
   callback: T,
   deps: Array<unknown> | void | null
-) {
+): T {
   const hook = updateWorkInProgressHook();
   const nextDeps = deps === undefined ? null : deps;
-
   const prevState = hook.memoizedState;
+
   if (prevState !== null) {
     if (nextDeps !== null) {
       const prevDeps = prevState[1];
@@ -252,6 +255,17 @@ export function useCallback<T>(
 
   hook.memoizedState = [callback, nextDeps];
   return callback;
+}
+
+export function useRef<T>(initialValue: T): { current: T } {
+  const hook = updateWorkInProgressHook();
+
+  if (!currentHook) {
+    const ref = { current: initialValue };
+    hook.memoizedState = ref;
+  }
+
+  return hook.memoizedState;
 }
 
 export function useContext<T>(context: ReactContext<T>): T {

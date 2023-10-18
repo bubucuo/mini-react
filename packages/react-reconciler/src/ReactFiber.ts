@@ -4,11 +4,11 @@ import {NoFlags} from "./ReactFiberFlags";
 import {Fiber} from "./ReactInternalTypes";
 import {isStr} from "../../shared/utils";
 import {
+  ContextConsumer,
+  ContextProvider,
   Fragment,
   HostComponent,
   HostText,
-  ContextProvider,
-  ContextConsumer,
 } from "./ReactWorkTags";
 import {
   IndeterminateComponent,
@@ -16,11 +16,8 @@ import {
   ClassComponent,
   FunctionComponent,
 } from "./ReactWorkTags";
-import {
-  REACT_FRAGMENT_TYPE,
-  REACT_PROVIDER_TYPE,
-  REACT_CONTEXT_TYPE,
-} from "shared/ReactSymbols";
+import {REACT_FRAGMENT_TYPE, REACT_PROVIDER_TYPE} from "shared/ReactSymbols";
+import {REACT_CONTEXT_TYPE} from "../../shared/ReactSymbols";
 
 // 创建一个fiber
 export function createFiber(
@@ -87,7 +84,6 @@ export function createFiberFromElement(
 ) {
   const {type, key} = element;
   const pendingProps = element.props;
-
   const fiber = createFiberFromTypeAndProps(
     type,
     key,
@@ -105,7 +101,6 @@ export function createFiberFromTypeAndProps(
   returnFiber: Fiber
 ) {
   let fiberTag: WorkTag = IndeterminateComponent;
-
   if (isFn(type)) {
     // 判断函数组件还是类组件
     if (shouldConstruct(type)) {

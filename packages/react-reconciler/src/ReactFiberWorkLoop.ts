@@ -1,4 +1,4 @@
-import {ReactElement} from "shared/ReactTypes";
+import {ReactContext, ReactElement} from "shared/ReactTypes";
 import {NormalPriority, Scheduler} from "scheduler";
 import {createFiberFromElement} from "./ReactFiber";
 import {FiberRoot, Fiber} from "./ReactInternalTypes";
@@ -8,6 +8,7 @@ import {
   HostRoot,
   HostText,
   FunctionComponent,
+  ContextProvider,
 } from "./ReactWorkTags";
 import {Placement, Update, Passive} from "./ReactFiberFlags";
 import {
@@ -16,6 +17,7 @@ import {
   // HookHasEffect,
   HookPassive,
 } from "./ReactHookEffectTags";
+import {popProvider} from "./ReactNewContext";
 
 // work in progress 正在工作当中的
 // current
@@ -68,10 +70,14 @@ function performUnitOfWork(unitOfWork: Fiber) {
 
 // 没有子节点->找兄弟->找叔叔->找爷爷节点
 function completeUnitOfWork(unitOfWork: Fiber) {
-  let completeWork: Fiber = unitOfWork;
+  let completedWork: Fiber = unitOfWork;
 
   do {
-    const siblingFiber = completeWork.sibling;
+    if (completedWork.tag === ContextProvider) {
+      const context: ReactContext<any> = completedWork.type._context;
+      popProvider(context);
+    }
+    const siblingFiber = completedWork.sibling;
 
     // 有兄弟节点
     if (siblingFiber !== null) {
@@ -79,10 +85,10 @@ function completeUnitOfWork(unitOfWork: Fiber) {
       return;
     }
 
-    const returnFiber = completeWork.return;
-    completeWork = returnFiber;
-    workInProgress = completeWork;
-  } while (completeWork);
+    const returnFiber = completedWork.return;
+    completedWork = returnFiber;
+    workInProgress = completedWork;
+  } while (completedWork);
 }
 
 function commitRoot() {
@@ -167,7 +173,7 @@ function commitHookEffects(finishedWork: Fiber, hookFlags: HookFlags) {
     do {
       if ((effect.tag & hookFlags) === hookFlags) {
         const create = effect.create;
-        effect.destory = create();
+        effect.destroy = create();
       }
       effect = effect.next;
     } while (effect !== firstEffect);

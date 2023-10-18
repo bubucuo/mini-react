@@ -57,7 +57,7 @@ export type Fiber = {
   alternate: Fiber | null;
 
   // context
-  dependencies: Dependencies | null;
+  dependencies: Dependencies | null; // 单链表结构存储
 };
 
 export type Container =
