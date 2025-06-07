@@ -1,0 +1,16 @@
+{
+  "name": "mini-react",
+  "version": "3.0.0",
+  "description": "mini react",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "react",
+    "mini-react",
+    "library"
+  ],
+  "author": "bubucuo",
+  "license": "ISC"
+}

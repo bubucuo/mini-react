@@ -1,0 +1,25 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  packages/react: {}
+
+  packages/react-dom: {}
+
+  packages/react-dom-bindings: {}
+
+  packages/react-reconciler: {}
+
+  packages/scheduler:
+    dependencies:
+      shared:
+        specifier: workspace:^
+        version: link:../shared
+
+  packages/shared: {}
