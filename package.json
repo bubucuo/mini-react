@@ -4,7 +4,7 @@
   "description": "mini react",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest"
   },
   "keywords": [
     "react",
@@ -12,5 +12,8 @@
     "library"
   ],
   "author": "bubucuo",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "vitest": "^3.2.2"
+  }
 }
