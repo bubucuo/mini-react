@@ -4,7 +4,8 @@
   "description": "mini react",
   "main": "index.js",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "examples": "pnpm --filter examples dev"
   },
   "keywords": [
     "react",
@@ -14,6 +15,9 @@
   "author": "bubucuo",
   "license": "ISC",
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.3.0",
+    "jsdom": "^26.1.0",
     "vitest": "^3.2.2"
   }
 }

@@ -1,0 +1,20 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`snapshots > renders correctly 1`] = `
+<div>
+  <div
+    class="border"
+  >
+    <h1>
+      函数组件
+    </h1>
+    <button>
+      0
+    </button>
+    <p>
+      1 + 2 = 
+      3
+    </p>
+  </div>
+</div>
+`;
