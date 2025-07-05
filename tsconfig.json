@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "types": ["vitest/globals"]
+  },
+  "include": ["packages"]
+}
