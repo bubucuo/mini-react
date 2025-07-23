@@ -335,11 +335,11 @@ function requestHostCallback() {
 }
 
 export {
-  ImmediatePriority as unstable_ImmediatePriority,
-  UserBlockingPriority as unstable_UserBlockingPriority,
-  NormalPriority as unstable_NormalPriority,
-  IdlePriority as unstable_IdlePriority,
-  LowPriority as unstable_LowPriority,
+  ImmediatePriority, // as unstable_ImmediatePriority,
+  UserBlockingPriority, // as unstable_UserBlockingPriority,
+  NormalPriority, // as unstable_NormalPriority,
+  IdlePriority, // as unstable_IdlePriority,
+  LowPriority, // as unstable_LowPriority,
   unstable_scheduleCallback,
   unstable_cancelCallback,
   shouldYieldToHost as unstable_shouldYield,
