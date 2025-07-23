@@ -46,6 +46,10 @@ let startTime = -1; // 全局变量，和task中的startTime不一样
 let currentTask: Task | null = null; // 当前正在执行的任务
 let currentPriorityLevel: PriorityLevel = NormalPriority; // 当前任务的优先级
 
+// delay
+let isHostTimeoutScheduled = false;
+let taskTimeoutID = -1; // 记录当前setTimeout的ID
+
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
@@ -106,9 +110,19 @@ function unstable_scheduleCallback(
 
   // 把任务放入对应的任务池中
   if (startTime > currentTime) {
-    // 如果任务有延迟，放入 timerQueue,这个任务池中的任务要做的事情是setTimeout
+    // 如果任务有延迟，放入 timerQueue,这个任务池中的任务要做的事情是 setTimeout
     newTask.sortIndex = startTime; // 按照开始时间排序
     push(timerQueue, newTask);
+    // lock 锁
+    if (peek(taskQueue) === null && newTask === peek(timerQueue)) {
+      // 没有可执行的任务
+      if (isHostTimeoutScheduled) {
+        cancelHostTimeout();
+      } else {
+        isHostTimeoutScheduled = true;
+      }
+      requestHostTimeout(handleTimeout, startTime - currentTime);
+    }
   } else {
     // 如果任务没有延迟，放入 taskQueue,这个任务池中的任务要做的事情是执行任务
     newTask.sortIndex = expirationTime; // 按照过期时间排序
@@ -124,6 +138,44 @@ function unstable_cancelCallback(task: Task): void {
   // 所以不支持取消任务
   // 可以通过设置 callback 为 null 来标记任务已取消
   task.callback = null;
+}
+
+function cancelHostTimeout() {
+  clearTimeout(taskTimeoutID);
+  taskTimeoutID = -1;
+}
+
+function requestHostTimeout(
+  callback: (currentTime: number) => void,
+  ms: number
+) {
+  taskTimeoutID = window.setTimeout(() => {
+    callback(getCurrentTime());
+  }, ms);
+}
+
+// 任务到期，把这个任务从 timerQueue 中删除，添加到taskQueue 中
+function handleTimeout(currentTime: number) {
+  isHostTimeoutScheduled = false;
+  advanceTimers(currentTime);
+}
+// 取出timerQueue中到执行的时间任务，删除。有效任务push到 taskQueue
+function advanceTimers(currentTime: number) {
+  let timer = peek(timerQueue);
+  while (timer !== null) {
+    if (timer.callback === null) {
+      // 无效任务
+      pop(timerQueue);
+    } else if (timer.startTime <= currentTime) {
+      // 有效任务到达执行时间
+      pop(timerQueue);
+      timer.sortIndex = timer.expirationTime;
+      push(taskQueue, timer);
+    } else {
+      return;
+    }
+    timer = peek(timerQueue);
+  }
 }
 
 // should yield to the host 要不要把控制权还给主线程
