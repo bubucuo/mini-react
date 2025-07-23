@@ -54,6 +54,109 @@ let taskTimeoutID = -1; // 记录当前setTimeout的ID
 let isHostCallbackScheduled = false;
 let isPerformingWork = false;
 
+let isMessageLoopRunning = false;
+
+let schedulePerformWorkUntilDeadline: any;
+
+// 开启一个时间切片
+// event loop
+// 一个work就是一个时间切片里执行的一些/一个/多个 task
+// 一个work相当于event loop中的一个宏任务
+const performWorkUntilDeadline = () => {
+  needsPaint = false; // 是否需要重绘制
+
+  if (isMessageLoopRunning) {
+    const currentTime = getCurrentTime();
+    // 记录一个时间切片的其实时间，时间戳
+    startTime = currentTime;
+    let hasMoreWork = true;
+    try {
+      hasMoreWork = flushWork(currentTime);
+    } finally {
+      if (hasMoreWork) {
+        schedulePerformWorkUntilDeadline();
+      } else {
+        isMessageLoopRunning = false;
+      }
+    }
+  }
+};
+
+const channel = new MessageChannel();
+const port = channel.port2;
+channel.port1.onmessage = performWorkUntilDeadline;
+schedulePerformWorkUntilDeadline = () => {
+  port.postMessage(null); // 触发宏任务
+};
+
+// 在一个时间切片内执行一个work
+function flushWork(initialTime: number) {
+  isHostCallbackScheduled = false;
+  if (isHostTimeoutScheduled) {
+    isHostTimeoutScheduled = false;
+    cancelHostTimeout();
+  }
+
+  // 在执行一个work,标记work
+  isPerformingWork = true;
+  const previousPriorityLevel = currentPriorityLevel;
+  try {
+    return workLoop(initialTime);
+  } finally {
+    currentTask = null;
+    currentPriorityLevel = previousPriorityLevel;
+    isPerformingWork = false;
+  }
+}
+
+function workLoop(initialTime: number) {
+  let currentTime = initialTime;
+  // 去timerQueue中检查是否有到期的task，如果有就移到taskQueue中
+  advanceTimers(currentTime);
+  currentTask = peek(taskQueue);
+  while (currentTask !== null) {
+    if (currentTask.expirationTime > currentTime && shouldYieldToHost()) {
+      break;
+    }
+    const callback = currentTask.callback;
+
+    if (typeof callback === "function") {
+      // 是有效的任务，接下来就执行这个任务
+      // 防止重复执行
+      currentTask.callback = null;
+      currentPriorityLevel = currentTask.priorityLevel;
+      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
+      const continuationCallback = callback(didUserCallbackTimeout);
+      currentTime = getCurrentTime();
+      if (typeof continuationCallback === "function") {
+        currentTask.callback = continuationCallback;
+        advanceTimers(currentTime);
+        return true;
+      } else {
+        if (currentTask === peek(taskQueue)) {
+          pop(taskQueue);
+        }
+        advanceTimers(currentTime);
+      }
+    } else {
+      // 这个任务不是一个有效任务
+      pop(taskQueue);
+    }
+    currentTask = peek(taskQueue);
+  }
+
+  if (currentTask !== null) {
+    return true;
+  } else {
+    // taskQueue 为空
+    const firstTimer = peek(timerQueue);
+    if (firstTimer !== null) {
+      requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
+    }
+    return false;
+  }
+}
+
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
@@ -221,39 +324,15 @@ function requestPaint() {
   needsPaint = true;
 }
 
-// todo
-function workLoop(initialTime: number) {
-  let currentTime = initialTime;
-  currentTask = peek(taskQueue);
-  while (currentTask !== null) {
-    if (currentTask.expirationTime > currentTime && shouldYieldToHost()) {
-      // This currentTask hasn't expired, and we've reached the deadline.
-      // 如果任务还没有到达过期时间，或者是到达了当前时间切片的截止时间
-      break;
-    }
-    const callback = currentTask.callback;
-    if (typeof callback === "function") {
-      // 这是个有效的任务，执行
-      currentTask.callback = null;
-      currentPriorityLevel = currentTask.priorityLevel;
-      const didUserCallbackTimeout = currentTask.expirationTime <= currentTime;
-      const continuationCallback = callback(didUserCallbackTimeout);
-      currentTime = getCurrentTime();
-      if (typeof continuationCallback === "function") {
-        // todo
-        // callback()
-      } else {
-        // todo
-      }
-    } else {
-      // 这个时候这个任务是在堆顶，可以直接删除
-      pop(taskQueue);
-    }
-    currentTask = peek(taskQueue);
+// 从 taskQueue 中取出任务，并且执行这些任务
+// 怎么高效、丝滑地执行这些任务
+// 考虑到任务sortIndex、任务可中断、
+function requestHostCallback() {
+  if (!isMessageLoopRunning) {
+    isMessageLoopRunning = true;
+    schedulePerformWorkUntilDeadline();
   }
 }
-
-function requestHostCallback() {}
 
 export {
   ImmediatePriority as unstable_ImmediatePriority,
