@@ -50,6 +50,10 @@ let currentPriorityLevel: PriorityLevel = NormalPriority; // 当前任务的优�
 let isHostTimeoutScheduled = false;
 let taskTimeoutID = -1; // 记录当前setTimeout的ID
 
+// 任务调度
+let isHostCallbackScheduled = false;
+let isPerformingWork = false;
+
 function unstable_scheduleCallback(
   priorityLevel: PriorityLevel,
   callback: Callback,
@@ -127,6 +131,10 @@ function unstable_scheduleCallback(
     // 如果任务没有延迟，放入 taskQueue,这个任务池中的任务要做的事情是执行任务
     newTask.sortIndex = expirationTime; // 按照过期时间排序
     push(taskQueue, newTask);
+
+    if (!isHostCallbackScheduled && !isPerformingWork) {
+      requestHostCallback();
+    }
   }
 
   return newTask;
@@ -158,6 +166,20 @@ function requestHostTimeout(
 function handleTimeout(currentTime: number) {
   isHostTimeoutScheduled = false;
   advanceTimers(currentTime);
+
+  if (!isHostCallbackScheduled) {
+    if (peek(taskQueue) !== null) {
+      // taskQueue中有可执行的任务
+      isHostCallbackScheduled = true;
+      requestHostCallback();
+    } else {
+      // taskQueue没有可执行的任务
+      const firstTimer = peek(timerQueue);
+      if (firstTimer !== null) {
+        requestHostTimeout(handleTimeout, firstTimer.startTime - currentTime);
+      }
+    }
+  }
 }
 // 取出timerQueue中到执行的时间任务，删除。有效任务push到 taskQueue
 function advanceTimers(currentTime: number) {
@@ -230,6 +252,8 @@ function workLoop(initialTime: number) {
     currentTask = peek(taskQueue);
   }
 }
+
+function requestHostCallback() {}
 
 export {
   ImmediatePriority as unstable_ImmediatePriority,
